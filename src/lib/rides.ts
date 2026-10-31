@@ -11,7 +11,7 @@ export type Ride = {
   status: RideStatus; created_at: string;
 };
 
-export const RIDE_OPTIONS = [
+export const RIDE_OPTIONS: { type: RideType; name: string; seats: number; multiplier: number; icon: string; available?: boolean }[] = [
   { type: "lotty_x" as RideType, name: "Lotty Go", seats: 2, multiplier: 0.8, icon: "car" },
   { type: "lotty_comfort" as RideType, name: "Lotty Standard", seats: 4, multiplier: 1, icon: "car-sports" },
   { type: "lotty_xl" as RideType, name: "Lotty Women", seats: 4, multiplier: 1, icon: "account-heart", available: false },
