@@ -7,6 +7,7 @@ export type Ride = {
   id: string; rider_id: string; driver_id: string | null;
   pickup_address: string; pickup_lat: number; pickup_lng: number;
   dropoff_address: string; dropoff_lat: number; dropoff_lng: number;
+  stops: { address: string; latitude: number; longitude: number }[];
   ride_type: RideType; payment_method: PaymentMethod; fare: number; distance_km: number;
   status: RideStatus; created_at: string;
 };
