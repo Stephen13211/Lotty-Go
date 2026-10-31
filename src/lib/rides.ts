@@ -2,18 +2,19 @@ import { supabase } from "./supabase";
 
 export type RideType = "lotty_x" | "lotty_comfort" | "lotty_xl";
 export type RideStatus = "requested" | "accepted" | "in_progress" | "completed" | "cancelled";
+export type PaymentMethod = "cash" | "card";
 export type Ride = {
   id: string; rider_id: string; driver_id: string | null;
   pickup_address: string; pickup_lat: number; pickup_lng: number;
   dropoff_address: string; dropoff_lat: number; dropoff_lng: number;
-  ride_type: RideType; fare: number; distance_km: number;
+  ride_type: RideType; payment_method: PaymentMethod; fare: number; distance_km: number;
   status: RideStatus; created_at: string;
 };
 
 export const RIDE_OPTIONS = [
-  { type: "lotty_x" as RideType, name: "Lotty X", seats: 4, multiplier: 1, icon: "car" },
-  { type: "lotty_comfort" as RideType, name: "Lotty Comfort", seats: 4, multiplier: 1.4, icon: "car-sports" },
-  { type: "lotty_xl" as RideType, name: "Lotty XL", seats: 6, multiplier: 1.8, icon: "van-passenger" },
+  { type: "lotty_x" as RideType, name: "Lotty Go", seats: 2, multiplier: 0.8, icon: "car" },
+  { type: "lotty_comfort" as RideType, name: "Lotty Standard", seats: 4, multiplier: 1, icon: "car-sports" },
+  { type: "lotty_xl" as RideType, name: "Lotty Women", seats: 4, multiplier: 1, icon: "account-heart", available: false },
 ];
 
 export function estimateFare(km: number, m: number) { return Math.round((20 + km * 9) * m); }
@@ -44,4 +45,3 @@ export async function updateRideStatus(rideId: string, status: RideStatus) {
   const { error } = await supabase.from("rides").update({ status }).eq("id", rideId);
   if (error) throw error;
 }
-
