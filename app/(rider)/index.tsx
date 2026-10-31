@@ -29,11 +29,14 @@ function PlaceInput({ label, value, placeholder, icon, onChangeText, onSelect, r
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&limit=6";
+        const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&limit=10";
         const response = await fetch(url);
         const json = await response.json();
         if (!active) return;
-        const places: Place[] = (json.features ?? []).map((feature: any) => {
+        // Keep autocomplete results strictly within South Africa.
+        const places: Place[] = (json.features ?? [])
+          .filter((feature: any) => String(feature.properties?.countrycode ?? "").toLowerCase() === "za")
+          .map((feature: any) => {
           const p = feature.properties ?? {};
           const label = [p.name, p.street, p.suburb, p.city || p.town || p.village, p.state].filter(Boolean).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i).join(", ");
           return { label: label || query, coords: { longitude: feature.geometry.coordinates[0], latitude: feature.geometry.coordinates[1] } };
@@ -271,7 +274,7 @@ const s = StyleSheet.create({
   placeWrap: { position: "relative" },
   locationLabel: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: spacing.xs },
   inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 46 },
-  input: { flex: 1, fontSize: 15, color: colors.onSurface, paddingVertical: spacing.xs },
+  input: { flex: 1, fontSize: 13, color: colors.onSurface, paddingVertical: spacing.xs },
   suggestions: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: spacing.sm, elevation: 5, zIndex: 30 },
   suggestionRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   suggestionText: { flex: 1, color: colors.onSurface, fontSize: 13 },
