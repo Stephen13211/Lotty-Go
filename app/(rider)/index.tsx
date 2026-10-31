@@ -21,42 +21,50 @@ function PlaceInput({ label, value, placeholder, icon, onChangeText, onSelect, r
 }) {
   const [suggestions, setSuggestions] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState("");
 
   useEffect(() => {
     const query = value.trim();
-    if (query.length < 3) { setSuggestions([]); return; }
+    // Do not search again after a result has been selected. This prevents
+    // the second popup of businesses appearing after the first selection.
+    if (query.length < 3 || query === selectedLabel) {
+      setSuggestions([]);
+      return;
+    }
     let active = true;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(query) + "&limit=10";
-        const response = await fetch(url);
+        // Nominatim returns detailed address parts, including house numbers
+        // where individual residential addresses are mapped in OpenStreetMap.
+        const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=za&limit=8&q=" + encodeURIComponent(query);
+        const response = await fetch(url, { headers: { "Accept-Language": "en" } });
+        if (!response.ok) throw new Error("Address search unavailable");
         const json = await response.json();
         if (!active) return;
-        // Keep autocomplete results strictly within South Africa.
-        const places: Place[] = (json.features ?? [])
-          .filter((feature: any) => String(feature.properties?.countrycode ?? "").toLowerCase() === "za")
-          .map((feature: any) => {
-          const p = feature.properties ?? {};
-          const label = [p.name, p.street, p.suburb, p.city || p.town || p.village, p.state].filter(Boolean).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i).join(", ");
-          return { label: label || query, coords: { longitude: feature.geometry.coordinates[0], latitude: feature.geometry.coordinates[1] } };
-        });
+        const places: Place[] = (json ?? []).map((item: any) => {
+          const a = item.address ?? {};
+          const primary = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(" ");
+          const locality = [a.suburb || a.neighbourhood || a.residential, a.city || a.town || a.village || a.municipality, a.state].filter(Boolean);
+          const label = [primary || item.name, ...locality].filter(Boolean).filter((v: string, i: number, all: string[]) => all.indexOf(v) === i).join(", ");
+          return { label: label || item.display_name, coords: { latitude: Number(item.lat), longitude: Number(item.lon) } };
+        }).filter((place: Place) => Number.isFinite(place.coords.latitude) && Number.isFinite(place.coords.longitude));
         setSuggestions(places);
       } catch {
         if (active) setSuggestions([]);
       } finally {
         if (active) setLoading(false);
       }
-    }, 350);
+    }, 900);
     return () => { active = false; clearTimeout(timer); };
-  }, [value]);
+  }, [value, selectedLabel]);
 
   return (
     <View style={s.placeWrap}>
       <Text style={s.locationLabel}>{label}</Text>
       <View style={s.inputRow}>
         <Icon name={icon as any} size={21} color={colors.brandPrimary} />
-        <TextInput value={value} onChangeText={onChangeText} onSubmitEditing={onSubmit}
+        <TextInput value={value} onChangeText={(text) => { setSelectedLabel(""); onChangeText(text); }} onSubmitEditing={onSubmit}
           placeholder={placeholder} placeholderTextColor={colors.muted}
           style={s.input} returnKeyType="search" autoCorrect={false} />
         {loading ? <ActivityIndicator color={colors.brandPrimary} /> : null}
@@ -65,7 +73,7 @@ function PlaceInput({ label, value, placeholder, icon, onChangeText, onSelect, r
       {suggestions.length > 0 && (
         <View style={s.suggestions}>
           {suggestions.map((item, index) => (
-            <Pressable key={item.label + index} onPress={() => { onSelect(item); setSuggestions([]); }}
+            <Pressable key={item.label + index} onPress={() => { setSelectedLabel(item.label); onSelect(item); setSuggestions([]); }}
               style={s.suggestionRow}>
               <Icon name="map-marker-outline" size={19} color={colors.muted} />
               <Text style={s.suggestionText} numberOfLines={2}>{item.label}</Text>
