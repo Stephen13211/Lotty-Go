@@ -99,6 +99,7 @@ export default function RiderHome() {
   const [payment, setPayment] = useState<PaymentMethod>("cash");
   const [busy, setBusy] = useState(false);
   const [locationBusy, setLocationBusy] = useState(true);
+  const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
 
   const useCurrentLocation = async () => {
     setLocationBusy(true);
@@ -134,7 +135,49 @@ export default function RiderHome() {
   const selectDestination = (place: Place) => { setDestination(place); setDestinationText(place.label); };
   const selectStop = (id: string, place: Place) => setStops(old => old.map(stop => stop.id === id ? { ...stop, ...place } : stop));
 
-  const routePoints = [pickup, ...stops.filter(stop => !!stop.coords), destination].filter(Boolean) as Place[];
+  const routePoints = useMemo(
+    () => [pickup, ...stops.filter(stop => !!stop.coords), destination].filter(Boolean) as Place[],
+    [pickup, stops, destination],
+  );
+
+  useEffect(() => {
+    if (routePoints.length < 2) {
+      setRoadRouteCoordinates([]);
+      return;
+    }
+
+    let cancelled = false;
+    const coordinates = routePoints
+      .map(point => `${point.coords.longitude},${point.coords.latitude}`)
+      .join(";");
+
+    // OSRM returns the road-following route geometry instead of drawing a
+    // straight line between pickup and destination pins.
+    fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`)
+      .then(response => {
+        if (!response.ok) throw new Error("Route service unavailable");
+        return response.json();
+      })
+      .then(result => {
+        const routeCoordinates = result?.routes?.[0]?.geometry?.coordinates;
+        if (!cancelled && Array.isArray(routeCoordinates) && routeCoordinates.length > 1) {
+          setRoadRouteCoordinates(
+            routeCoordinates.map(([longitude, latitude]: [number, number]) => ({
+              latitude,
+              longitude,
+            })),
+          );
+        } else if (!cancelled) {
+          setRoadRouteCoordinates(routePoints.map(point => point.coords));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRoadRouteCoordinates(routePoints.map(point => point.coords));
+      });
+
+    return () => { cancelled = true; };
+  }, [routePoints]);
+
   const km = routePoints.length > 1 ? routePoints.slice(1).reduce((total, point, index) => total + haversineKm(routePoints[index].coords, point.coords), 0) : 0;
   const selectedOption = RIDE_OPTIONS.find(option => option.type === selectedRide) ?? RIDE_OPTIONS[0];
 
@@ -174,7 +217,7 @@ export default function RiderHome() {
   };
 
   const mapCenter = pickup?.coords ?? FALLBACK;
-  const mapLine = routePoints.map(point => point.coords);
+  const mapLine = roadRouteCoordinates.length > 1 ? roadRouteCoordinates : routePoints.map(point => point.coords);
   return (
     <View style={{ flex: 1 }}>
       <MapView style={StyleSheet.absoluteFill}
