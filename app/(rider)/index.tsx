@@ -90,7 +90,7 @@ export default function RiderHome() {
   const sheetRef = useRef<BottomSheet>(null);
   const snaps = useMemo(() => ["62%", "90%"], []);
   const { session, configured } = useAuth();
-  const [pickupText, setPickupText] = useState("Finding your current location…");
+  const [pickupText, setPickupText] = useState("");
   const [pickup, setPickup] = useState<Place | null>(null);
   const [destinationText, setDestinationText] = useState("");
   const [destination, setDestination] = useState<Place | null>(null);
@@ -119,7 +119,8 @@ export default function RiderHome() {
         if (a) label = [a.name, a.street, a.subregion, a.city].filter(Boolean).join(", ") || label;
       } catch {}
       setPickup({ label, coords });
-      setPickupText(label);
+      // Keep the input empty: GPS is selected internally, while the field stays ready for manual typing.
+      setPickupText("");
     } catch {
       Alert.alert("Could not get location", "Type your pickup address or try current location again.");
       setPickupText("");
