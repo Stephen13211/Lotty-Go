@@ -39,7 +39,6 @@
           "locationWhenInUsePermission": "Lotty Go uses your location to request rides and match drivers."
         }
       ],
-      "@react-native-vector-icons/material-design-icons",
       "@maplibre/maplibre-react-native"
     ],
     "experiments": {
