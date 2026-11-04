@@ -100,6 +100,7 @@ export default function RiderHome() {
   const [busy, setBusy] = useState(false);
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
+  const [roadRouteDistanceKm, setRoadRouteDistanceKm] = useState<number | null>(null);
 
   const useCurrentLocation = async () => {
     setLocationBusy(true);
@@ -143,10 +144,12 @@ export default function RiderHome() {
   useEffect(() => {
     if (routePoints.length < 2) {
       setRoadRouteCoordinates([]);
+      setRoadRouteDistanceKm(null);
       return;
     }
 
     let cancelled = false;
+    setRoadRouteDistanceKm(null);
     const coordinates = routePoints
       .map(point => `${point.coords.longitude},${point.coords.latitude}`)
       .join(";");
@@ -167,18 +170,30 @@ export default function RiderHome() {
               longitude,
             })),
           );
+          setRoadRouteDistanceKm(Number(result.routes[0].distance) / 1000);
         } else if (!cancelled) {
           setRoadRouteCoordinates(routePoints.map(point => point.coords));
+          setRoadRouteDistanceKm(
+            routePoints.slice(1).reduce((total, point, index) =>
+              total + haversineKm(routePoints[index].coords, point.coords), 0),
+          );
         }
       })
       .catch(() => {
-        if (!cancelled) setRoadRouteCoordinates(routePoints.map(point => point.coords));
+        if (!cancelled) {
+          setRoadRouteCoordinates(routePoints.map(point => point.coords));
+          setRoadRouteDistanceKm(
+            routePoints.slice(1).reduce((total, point, index) =>
+              total + haversineKm(routePoints[index].coords, point.coords), 0),
+          );
+        }
       });
 
     return () => { cancelled = true; };
   }, [routePoints]);
 
-  const km = routePoints.length > 1 ? routePoints.slice(1).reduce((total, point, index) => total + haversineKm(routePoints[index].coords, point.coords), 0) : 0;
+  const straightLineKm = routePoints.length > 1 ? routePoints.slice(1).reduce((total, point, index) => total + haversineKm(routePoints[index].coords, point.coords), 0) : 0;
+  const km = roadRouteDistanceKm ?? straightLineKm;
   const selectedOption = RIDE_OPTIONS.find(option => option.type === selectedRide) ?? RIDE_OPTIONS[0];
 
   const confirmRide = async () => {
