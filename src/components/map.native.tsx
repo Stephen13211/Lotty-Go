@@ -102,7 +102,7 @@ export function MapView(props: any) {
             zoom,
           }}
         />
-        <UserLocation visible={!!props.showsUserLocation} />
+        {props.showsUserLocation ? <UserLocation animated /> : null}
         {props.children}
       </Map>
     </View>
