@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
-import { getDriverProfile, saveDriverApplication, type DriverProfile } from "@/src/lib/driver";
+import { getDriverProfile, saveDriverApplication, setWomenOnlyPreference, type DriverProfile } from "@/src/lib/driver";
 import { colors, radius, spacing } from "@/src/theme";
 
 function Field({ label, value, onChangeText, placeholder, keyboardType }: any) {
@@ -27,7 +27,7 @@ export default function DriverApplication() {
     if(!session||!configured){Alert.alert("Sign in required","Please sign in and connect Supabase first.");return;}
     if(!legalName.trim()||!phone.trim()||!make.trim()||!model.trim()||!registration.trim()){Alert.alert("Missing details","Please complete your name, phone and vehicle details.");return;}
     setSaving(true);
-    try { const saved=await saveDriverApplication({user_id:session.user.id,legal_name:legalName.trim(),phone:phone.trim(),vehicle_type:vehicleType,vehicle_make:make.trim(),vehicle_model:model.trim(),vehicle_year:year?Number(year):null,vehicle_registration:registration.trim().toUpperCase(),women_riders_only:womenOnly});setProfile(saved);Alert.alert("Application saved","Your driver application is now pending review. You cannot go online until Lotty Go approves it."); }
+    try { if(profile?.application_status==="approved"){await setWomenOnlyPreference(womenOnly);setProfile({...profile,women_riders_only:womenOnly});Alert.alert("Preference updated","Your women-only ride preference has been updated.");}else{const saved=await saveDriverApplication({user_id:session.user.id,legal_name:legalName.trim(),phone:phone.trim(),vehicle_type:vehicleType,vehicle_make:make.trim(),vehicle_model:model.trim(),vehicle_year:year?Number(year):null,vehicle_registration:registration.trim().toUpperCase(),women_riders_only:womenOnly});setProfile(saved);Alert.alert("Application saved","Your driver application is now pending review. You cannot go online until Lotty Go approves it.");} }
     catch(e:any){Alert.alert("Could not save",e?.message??"Please try again.");}
     finally{setSaving(false);}
   };
