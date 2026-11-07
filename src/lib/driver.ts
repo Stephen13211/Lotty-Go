@@ -43,3 +43,8 @@ export async function saveDriverApplication(input: {
   if (error) throw error;
   return data as DriverProfile;
 }
+
+export async function setWomenOnlyPreference(enabled: boolean) {
+  const { error } = await supabase.rpc("set_driver_women_preference", { p_enabled: enabled });
+  if (error) throw error;
+}
