@@ -24,7 +24,7 @@ export default function Settings() {
     <View style={s.group}>
       <Text style={s.heading}>ACCOUNT</Text>
       <Item icon="account-outline" title="Account details" detail={session?.user?.email ?? "Your profile"} onPress={() => router.push(driver ? "/(driver)/profile" : "/(rider)/profile")} />
-      <Item icon="shield-check-outline" title="Safety and privacy" detail="Your safety on every trip" onPress={() => router.push("/safety")} />
+      <Item icon="shield-check-outline" title="Safety and privacy" detail="Your safety on every trip" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "safety" } })} />
     </View>
     {driver ? <View style={s.group}>
       <Text style={s.heading}>DRIVER</Text>
@@ -33,13 +33,13 @@ export default function Settings() {
       <Item icon="account-heart-outline" title="Lotty Women preference" detail="Choose whether to accept women riders only" onPress={() => router.push("/driver-application")} />
     </View> : <View style={s.group}>
       <Text style={s.heading}>RIDING</Text>
-      <Item icon="credit-card-outline" title="Payment methods" detail="Cash is available; card payments are not connected yet" onPress={() => router.push("/payment-methods")} />
-      <Item icon="map-marker-outline" title="Saved places" detail="Manage home and work locations" onPress={() => router.push("/saved-places")} />
+      <Item icon="credit-card-outline" title="Payment methods" detail="Cash is available; card payments are not connected yet" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "payment" } })} />
+      <Item icon="map-marker-outline" title="Saved places" detail="Manage home and work locations" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "saved" } })} />
     </View>}
     <View style={s.group}>
       <Text style={s.heading}>SUPPORT</Text>
-      <Item icon="help-circle-outline" title="Help and support" detail="Get help with your account or a trip" onPress={() => router.push("/support")} />
-      <Item icon="information-outline" title="About Lotty Go" detail="Version 1.0.0" onPress={() => router.push("/about")} />
+      <Item icon="help-circle-outline" title="Help and support" detail="Get help with your account or a trip" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "support" } })} />
+      <Item icon="information-outline" title="About Lotty Go" detail="Version 1.0.0" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "about" } })} />
     </View>
     <Pressable onPress={async () => { await signOut(); router.replace("/welcome"); }} style={s.logout}>
       <Icon name="logout" size={19} color={colors.error} /><Text style={{ color: colors.error, fontWeight: "800" }}>Log out</Text>
