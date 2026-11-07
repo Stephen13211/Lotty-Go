@@ -42,6 +42,7 @@ create table if not exists public.payments (
   rider_id uuid not null references auth.users(id),
   driver_id uuid references auth.users(id),
   total_fare numeric(10,2) not null check (total_fare >= 0),
+  payment_method text not null default 'card' check (payment_method = 'card'),
   driver_share numeric(10,2) not null check (driver_share >= 0),
   lotty_share numeric(10,2) not null check (lotty_share >= 0),
   currency text not null default 'ZAR',
@@ -211,7 +212,10 @@ begin
     end if;
   else
     if new.user_id <> old.user_id
-       or new.application_status is distinct from old.application_status
+       or (
+         new.application_status is distinct from old.application_status
+         and not (old.application_status = 'rejected' and new.application_status = 'pending')
+       )
        or new.women_service_approved is distinct from old.women_service_approved
        or new.payout_status is distinct from old.payout_status
        or new.payout_provider is distinct from old.payout_provider
