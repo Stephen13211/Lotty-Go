@@ -10,6 +10,7 @@ create table if not exists public.rides (
   dropoff_address text not null,
   dropoff_lat double precision not null,
   dropoff_lng double precision not null,
+  stops jsonb not null default '[]'::jsonb,
   ride_type text not null check (ride_type in ('lotty_x','lotty_comfort','lotty_xl')),
   fare numeric(10,2) not null,
   distance_km numeric(8,2) not null,
@@ -17,6 +18,10 @@ create table if not exists public.rides (
     check (status in ('requested','accepted','in_progress','completed','cancelled')),
   created_at timestamptz not null default now()
 );
+
+-- Also upgrades an existing rides table created before multi-stop support.
+alter table public.rides
+  add column if not exists stops jsonb not null default '[]'::jsonb;
 
 create index if not exists rides_status_idx on public.rides(status);
 create index if not exists rides_rider_idx  on public.rides(rider_id);
@@ -34,4 +39,3 @@ create policy "driver_accept"     on public.rides for update
 create policy "rider_update_own"  on public.rides for update
   using (auth.uid() = rider_id)
   with check (auth.uid() = rider_id);
-
