@@ -250,7 +250,7 @@ set search_path = public
 as $$
 begin
   if auth.uid() is not null
-     and (auth.jwt() -> 'app_metadata' ->> 'role') <> 'admin'
+     and coalesce((auth.jwt() -> 'app_metadata' ->> 'role'), '') <> 'admin'
      and old.status = 'requested'
      and new.status = 'accepted'
      and new.driver_id = auth.uid() then
