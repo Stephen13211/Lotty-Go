@@ -1,15 +1,30 @@
-import { Redirect } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { useAuth } from "@/src/lib/auth";
-import { colors } from "@/src/theme";
+import { StyleSheet, Text, View } from "react-native";
 
-export default function Index() {
-  const { session, role, loading } = useAuth();
-  if (loading) return <View style={styles.l}><ActivityIndicator color={colors.brandPrimary} size="large"/></View>;
-  if (!session) return <Redirect href="/welcome" />;
-  if (role === "driver") return <Redirect href="/(driver)" />;
-  if (role === "rider") return <Redirect href="/(rider)" />;
-  return <Redirect href="/welcome" />;
+export default function StartupTest() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Lotty Go</Text>
+      <Text style={styles.message}>Android startup test passed.</Text>
+    </View>
+  );
 }
-const styles = StyleSheet.create({ l: { flex: 1, alignItems: "center", justifyContent: "center" }});
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 24,
+  },
+  title: {
+    color: "#F5B400",
+    fontSize: 36,
+    fontWeight: "800",
+  },
+  message: {
+    color: "#222222",
+    fontSize: 16,
+    marginTop: 12,
+  },
+});
