@@ -114,6 +114,7 @@ export default function RiderHome() {
   const [stops, setStops] = useState<Stop[]>([]);
   const [selectedRide, setSelectedRide] = useState<RideType>("lotty_x");
   const [payment, setPayment] = useState<PaymentMethod>("cash");
+  const [courierNotes, setCourierNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
@@ -239,6 +240,7 @@ export default function RiderHome() {
         stops: stops.map(stop => ({ address: stop.label, latitude: stop.coords.latitude, longitude: stop.coords.longitude })),
         ride_type: selectedRide,
         payment_method: payment,
+        service_notes: selectedRide === "courier_motorcycle" ? courierNotes.trim() : null,
         fare: estimateFare(km, selectedOption.multiplier),
         distance_km: Number(km.toFixed(2)),
       });
@@ -328,6 +330,7 @@ export default function RiderHome() {
             </Pressable>;
           })}
 
+          {selectedRide === "courier_motorcycle" ? <View style={{ gap: spacing.xs }}><Text style={s.section}>DELIVERY INSTRUCTIONS</Text><TextInput value={courierNotes} onChangeText={setCourierNotes} placeholder="Describe the parcel and any pickup or drop-off instructions" placeholderTextColor={colors.muted} multiline style={s.courierInput} /></View> : null}
           <Text style={s.section}>CHOOSE PAYMENT METHOD</Text>
           <View style={s.paymentRow}>
             <Pressable onPress={() => setPayment("cash")} style={[s.paymentOption, payment === "cash" && s.paymentActive]}>
@@ -379,6 +382,7 @@ const s = StyleSheet.create({
   rideName: { color: colors.onSurface, fontSize: 14, fontWeight: "800" },
   fare: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   comingSoon: { color: colors.muted, fontSize: 10, fontWeight: "800" },
+  courierInput: { minHeight: 72, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, padding: spacing.md, textAlignVertical: "top" },
   paymentRow: { flexDirection: "row", gap: spacing.sm },
   paymentOption: { flex: 1, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: spacing.sm },
   paymentActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
