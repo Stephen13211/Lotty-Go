@@ -1,5 +1,22 @@
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthProvider } from "@/src/lib/auth";
+
+const qc = new QueryClient();
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={qc}>
+          <AuthProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
 }
+
