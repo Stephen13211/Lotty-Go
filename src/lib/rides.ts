@@ -9,7 +9,7 @@ export type Ride = {
  dropoff_address:string;dropoff_lat:number;dropoff_lng:number;
  stops?:{address:string;latitude:number;longitude:number}[];
  ride_type:RideType;payment_method:PaymentMethod;fare:number;distance_km:number;
- status:RideStatus;created_at:string;
+ status:RideStatus;created_at:string;service_notes?:string|null;
 };
 
 export const RIDE_OPTIONS:{type:RideType;name:string;seats:number;multiplier:number;icon:string;available?:boolean}[]=[
