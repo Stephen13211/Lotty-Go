@@ -10,8 +10,8 @@ const BG = "https://images.unsplash.com/photo-1599407384144-77deae48a47a?w=1200&
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { setRole } = useAuth();
-  const pick = async (r: "rider"|"driver") => { await setRole(r); router.push({ pathname: "/(auth)/login", params: { role: r }}); };
+  const { setRole, session } = useAuth();
+  const pick = async (r: "rider"|"driver") => { await setRole(r); if (session) { router.replace(r === "driver" ? "/driver-application" : "/(rider)"); return; } router.push({ pathname: "/(auth)/login", params: { role: r }}); };
 
   return (
     <ImageBackground source={{ uri: BG }} style={{ flex: 1, justifyContent: "space-between" }}>
