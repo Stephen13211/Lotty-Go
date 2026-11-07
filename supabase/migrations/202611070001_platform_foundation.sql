@@ -183,3 +183,88 @@ end;
 $$;
 revoke all on function public.set_driver_women_preference(boolean) from public;
 grant execute on function public.set_driver_women_preference(boolean) to authenticated;
+
+
+-- SECURITY HARDENING: applicants must never be able to approve themselves,
+-- enable Lotty Women eligibility, or alter payout/review fields.
+create or replace function public.guard_driver_profile_privileged_fields()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  -- Trusted server-side operations (service role) have no end-user auth.uid().
+  if auth.uid() is null or (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin' then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if new.user_id <> auth.uid()
+       or new.application_status <> 'pending'
+       or new.women_service_approved <> false
+       or new.payout_status <> 'not_connected'
+       or new.payout_provider is not null
+       or new.payout_recipient_id is not null
+       or new.review_notes is not null
+       or new.reviewed_at is not null then
+      raise exception 'Driver applications must start pending and cannot set approval or payout fields';
+    end if;
+  else
+    if new.user_id <> old.user_id
+       or new.application_status is distinct from old.application_status
+       or new.women_service_approved is distinct from old.women_service_approved
+       or new.payout_status is distinct from old.payout_status
+       or new.payout_provider is distinct from old.payout_provider
+       or new.payout_recipient_id is distinct from old.payout_recipient_id
+       or new.review_notes is distinct from old.review_notes
+       or new.reviewed_at is distinct from old.reviewed_at then
+      raise exception 'Only Lotty Go administrators can change approval, verification, and payout fields';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists driver_profile_guard_privileged_fields on public.driver_profiles;
+create trigger driver_profile_guard_privileged_fields
+before insert or update on public.driver_profiles
+for each row execute function public.guard_driver_profile_privileged_fields();
+
+drop policy if exists "driver_profiles_insert_own" on public.driver_profiles;
+create policy "driver_profiles_insert_own" on public.driver_profiles
+  for insert with check (
+    auth.uid() = user_id
+    and application_status = 'pending'
+    and women_service_approved = false
+    and payout_status = 'not_connected'
+    and payout_provider is null
+    and payout_recipient_id is null
+  );
+
+-- An accepting driver may change only driver_id and status. This prevents
+-- changing the fare, rider, route, or other ride details during acceptance.
+create or replace function public.guard_ride_acceptance_changes()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null
+     and (auth.jwt() -> 'app_metadata' ->> 'role') <> 'admin'
+     and old.status = 'requested'
+     and new.status = 'accepted'
+     and new.driver_id = auth.uid() then
+    if (to_jsonb(new) - 'driver_id' - 'status')
+       is distinct from
+       (to_jsonb(old) - 'driver_id' - 'status') then
+      raise exception 'Drivers may only assign themselves and accept a requested ride';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists rides_guard_acceptance_changes on public.rides;
+create trigger rides_guard_acceptance_changes
+before update on public.rides
+for each row execute function public.guard_ride_acceptance_changes();
