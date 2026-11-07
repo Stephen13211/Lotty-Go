@@ -321,7 +321,7 @@ export default function RiderHome() {
               <View style={s.rideIcon}><Icon name={option.icon as any} size={27} color={colors.onSurface} /></View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.rideName}>{option.name}</Text>
-                <Text style={s.subText}>{option.seats} passengers{unavailable ? " · Coming soon" : " · Available"}</Text>
+                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{unavailable ? " · Coming soon" : " · Available"}</Text>
               </View>
               {unavailable ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier)}` : "—"}</Text>}
               {active && !unavailable && <Icon name="check-circle" size={21} color={colors.brandPrimary} />}
