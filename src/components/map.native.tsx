@@ -57,12 +57,14 @@ export function Polyline({
       <Layer
         id="lotty-go-route-line"
         type="line"
+        layout={{
+          "line-cap": "round",
+          "line-join": "round",
+        }}
         paint={{
           "line-color": strokeColor,
           "line-width": strokeWidth,
           "line-opacity": 1,
-          "line-cap": "round",
-          "line-join": "round",
         }}
       />
     </GeoJSONSource>
@@ -80,8 +82,6 @@ export function MapView(props: any) {
     Math.min(18, Math.log2(360 / Math.max(latitudeDelta, longitudeDelta, 0.0001))),
   );
 
-  // Remount Camera when the selected route changes so the map recentres and
-  // fits the route bounds calculated by the rider screen.
   const cameraKey = [latitude, longitude, latitudeDelta, longitudeDelta]
     .map((value) => value.toFixed(5))
     .join(":");
@@ -90,7 +90,7 @@ export function MapView(props: any) {
     <View style={[styles.container, props.style]}>
       <Map
         mapStyle={MAP_STYLE}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         androidView="texture"
         logo={false}
         compass={false}
