@@ -27,7 +27,7 @@ export default function Booking() {
     const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
     setBusy(true);
     try {
-      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
+      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, payment_method: "cash", fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
       Alert.alert("Ride requested", "Finding a driver near you.");
       router.replace("/(rider)/trips");
     } catch (e: any) { Alert.alert("Failed", e?.message ?? "Try again"); }
