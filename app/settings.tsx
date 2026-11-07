@@ -37,6 +37,7 @@ export default function Settings() {
       <Item icon="credit-card-outline" title="Payment methods" detail="Cash is available; card payments are not connected yet" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "payment" } })} />
       <Item icon="map-marker-outline" title="Saved places" detail="Manage home and work locations" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "saved" } })} />
     </View>}
+    {isAdmin ? <View style={s.group}><Text style={s.heading}>ADMINISTRATION</Text><Item icon="clipboard-check-outline" title="Driver approvals" detail="Review and approve driver applications" onPress={() => router.push("/admin-review")} /></View> : null}
     <View style={s.group}>
       <Text style={s.heading}>SUPPORT</Text>
       <Item icon="help-circle-outline" title="Help and support" detail="Get help with your account or a trip" onPress={() => router.push({ pathname: "/settings-detail", params: { section: "support" } })} />
