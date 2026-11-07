@@ -109,3 +109,55 @@ create policy "driver_read_own_private_documents" on storage.objects
 
 -- Payment rows are written only by trusted server-side functions/service role.
 -- The 75/25 values must be calculated in cents server-side, never trusted from the app.
+
+-- Enforce eligibility at the database boundary, not only in the app UI.
+drop policy if exists "driver_accept" on public.rides;
+create policy "driver_accept" on public.rides for update
+  using (
+    status = 'requested'
+    and exists (
+      select 1 from public.driver_profiles p
+      where p.user_id = auth.uid()
+        and p.application_status = 'approved'
+        and (p.vehicle_type = 'motorcycle' and ride_type = 'courier_motorcycle'
+          or p.vehicle_type = 'car' and ride_type <> 'courier_motorcycle')
+        and (ride_type <> 'lotty_xl' or p.women_service_approved = true)
+        and (p.women_riders_only = false or ride_type = 'lotty_xl')
+    )
+  )
+  with check (
+    auth.uid() = driver_id
+    and exists (
+      select 1 from public.driver_profiles p
+      where p.user_id = auth.uid()
+        and p.application_status = 'approved'
+        and (p.vehicle_type = 'motorcycle' and ride_type = 'courier_motorcycle'
+          or p.vehicle_type = 'car' and ride_type <> 'courier_motorcycle')
+        and (ride_type <> 'lotty_xl' or p.women_service_approved = true)
+        and (p.women_riders_only = false or ride_type = 'lotty_xl')
+    )
+  );
+
+drop policy if exists "driver_profiles_admin_update" on public.driver_profiles;
+create policy "driver_profiles_admin_update" on public.driver_profiles
+  for update using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+drop policy if exists "driver_documents_admin_update" on public.driver_documents;
+create policy "driver_documents_admin_update" on public.driver_documents
+  for update using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+-- Calculate the 75/25 split on the server when a payment ledger row is created.
+create or replace function public.set_lotty_payment_split()
+returns trigger language plpgsql as $$
+begin
+  new.driver_share := round(new.total_fare * 0.75, 2);
+  new.lotty_share := new.total_fare - new.driver_share;
+  return new;
+end;
+$$;
+drop trigger if exists lotty_payment_split_before_insert on public.payments;
+create trigger lotty_payment_split_before_insert
+before insert on public.payments
+for each row execute function public.set_lotty_payment_split();
