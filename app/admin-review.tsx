@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/src/lib/auth";
 import { supabase } from "@/src/lib/supabase";
 import { colors, radius, spacing } from "@/src/theme";
 
 type Application={user_id:string;legal_name:string|null;phone:string|null;vehicle_type:string|null;vehicle_make:string|null;vehicle_model:string|null;vehicle_registration:string|null;application_status:string;women_riders_only:boolean;women_service_approved:boolean;created_at:string};
 export default function AdminReview(){
- const insets=useSafeAreaInsets();const qc=useQueryClient();const [busy,setBusy]=useState<string|null>(null);
- const isAdmin=(supabase.auth as any)!==null;
+ const insets=useSafeAreaInsets();const qc=useQueryClient();const [busy,setBusy]=useState<string|null>(null);const {session}=useAuth();
+ const isAdmin=session?.user?.app_metadata?.role==="admin";
  const {data:rows=[],isLoading,error}=useQuery({queryKey:["admin-driver-applications"],queryFn:async()=>{const {data,error}=await supabase.from("driver_profiles").select("*").order("created_at",{ascending:false});if(error)throw error;return data as Application[];},enabled:isAdmin});
  const review=async(row:Application,approved:boolean)=>{
   setBusy(row.user_id);
