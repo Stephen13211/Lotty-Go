@@ -161,3 +161,25 @@ drop trigger if exists lotty_payment_split_before_insert on public.payments;
 create trigger lotty_payment_split_before_insert
 before insert on public.payments
 for each row execute function public.set_lotty_payment_split();
+
+-- Let an approved driver change only their women-only preference without
+-- granting permission to edit their approval status or verification fields.
+create or replace function public.set_driver_women_preference(p_enabled boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.driver_profiles
+     set women_riders_only = p_enabled,
+         updated_at = now()
+   where user_id = auth.uid()
+     and application_status = 'approved';
+  if not found then
+    raise exception 'Only an approved driver can change this preference';
+  end if;
+end;
+$$;
+revoke all on function public.set_driver_women_preference(boolean) from public;
+grant execute on function public.set_driver_women_preference(boolean) to authenticated;
