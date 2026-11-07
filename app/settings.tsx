@@ -17,6 +17,7 @@ export default function Settings() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { role, session, signOut } = useAuth();
+  const isAdmin = session?.user?.app_metadata?.role === "admin";
   const driver = role === "driver";
   return <ScrollView style={{ flex: 1, backgroundColor: colors.surface }} contentContainerStyle={{ padding: spacing.xl, paddingTop: insets.top + spacing.lg, gap: spacing.lg }}>
     <Text style={s.title}>Settings</Text>
