@@ -13,16 +13,17 @@ export default function Earnings() {
   const { data } = useQuery({ queryKey: ["driver-rides", session?.user.id], queryFn: listMyRides, enabled: configured });
   const stats = useMemo(() => {
     const mine = (data ?? []).filter(r => r.driver_id === session?.user.id && r.status === "completed");
-    return { total: mine.reduce((s,r) => s + Number(r.fare), 0), trips: mine.length, km: mine.reduce((s,r) => s + Number(r.distance_km), 0) };
+    return { total: mine.reduce((s,r) => s + (r.payment_method === "card" ? Number(r.fare) * 0.75 : Number(r.fare)), 0), trips: mine.length, km: mine.reduce((s,r) => s + Number(r.distance_km), 0) };
   }, [data, session?.user.id]);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.surface }} contentContainerStyle={{ padding: spacing.xl, paddingTop: insets.top + spacing.lg, gap: spacing.md }}>
       <Text style={{ fontSize: 28, fontWeight: "800", color: colors.onSurface }}>Earnings</Text>
       <View style={s.hero}>
-        <Text style={{ color: colors.onBrandPrimary, opacity: 0.85, fontSize: 13, fontWeight: "600" }}>Total earned</Text>
+        <Text style={{ color: colors.onBrandPrimary, opacity: 0.85, fontSize: 13, fontWeight: "600" }}>Estimated driver earnings</Text>
         <Text style={{ color: colors.onBrandPrimary, fontSize: 40, fontWeight: "900" }}>R{stats.total.toFixed(2)}</Text>
       </View>
+      <Text style={{ color: colors.muted, fontSize: 11 }}>Estimate only: card rides show the planned 75% driver share; cash rides show the full fare. Automated payouts are not connected yet.</Text>
       <View style={{ flexDirection: "row", gap: spacing.md }}>
         <View style={s.card}><Icon name="car" size={22} color={colors.brandPrimary} /><Text style={s.v}>{stats.trips}</Text><Text style={s.l}>Trips</Text></View>
         <View style={s.card}><Icon name="map-marker-distance" size={22} color={colors.brandPrimary} /><Text style={s.v}>{stats.km.toFixed(1)} km</Text><Text style={s.l}>Distance</Text></View>
