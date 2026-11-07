@@ -36,7 +36,7 @@ export default function Trips() {
       ) : isLoading ? <ActivityIndicator style={{ marginTop: 24 }} color={colors.brandPrimary} /> : (
         <FlatList data={data ?? []} keyExtractor={r => r.id} renderItem={render}
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={async () => { await refetch(); }} />}
           ListEmptyComponent={<View style={s.empty}><Icon name="car-off" size={48} color={colors.muted} /><Text style={s.emptyText}>No trips yet</Text></View>} />
       )}
     </View>
@@ -48,4 +48,3 @@ const s = StyleSheet.create({
   empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.md },
   emptyText: { color: colors.muted, fontSize: 14 },
 });
-
