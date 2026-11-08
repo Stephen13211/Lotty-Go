@@ -30,7 +30,7 @@ end; $$;
 revoke all on function public.create_trip_share_link(uuid) from public;
 grant execute on function public.create_trip_share_link(uuid) to authenticated;
 create or replace function public.revoke_trip_share_links(p_ride_id uuid)
-returns void language plpgsql security definer set search_path=public as $
+returns void language plpgsql security definer set search_path=public as $revoke$
 begin
   if auth.uid() is null or not exists (
     select 1 from public.rides r
@@ -38,7 +38,7 @@ begin
   ) then raise exception 'Only trip participants can revoke trip links'; end if;
   update public.trip_share_links set revoked_at=now()
   where ride_id=p_ride_id and revoked_at is null;
-end; $;
+end; $revoke$;
 revoke all on function public.revoke_trip_share_links(uuid) from public;
 grant execute on function public.revoke_trip_share_links(uuid) to authenticated;
 commit;
