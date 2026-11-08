@@ -56,3 +56,8 @@ export async function createTripShareLink(rideId:string) {
   const base=SUPABASE_URL.replace(/\/+$/,"");
   return `${base}/functions/v1/trip-share?token=${encodeURIComponent(data)}`;
 }
+
+export async function revokeTripShareLinks(rideId:string) {
+  const {error}=await supabase.rpc("revoke_trip_share_links",{p_ride_id:rideId});
+  if(error)throw error;
+}
