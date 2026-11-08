@@ -38,14 +38,20 @@ export async function listOpenRides(driverId:string){
  const {data:profile,error:profileError}=await supabase.from("driver_profiles").select("application_status,vehicle_type,women_riders_only,women_service_approved").eq("user_id",driverId).maybeSingle();
  if(profileError)throw profileError;
  if(!profile||profile.application_status!=="approved")return[];
- const {data,error}=await supabase.from("rides").select("*").eq("status","requested").order("created_at",{ascending:false});
+ const {data:availability,error:availabilityError}=await supabase.from("driver_availability")
+  .select("latitude,longitude,location_updated_at,is_online").eq("driver_id",driverId).maybeSingle();
+ if(availabilityError)throw availabilityError;
+ if(!availability?.is_online||availability.latitude==null||availability.longitude==null
+   ||!availability.location_updated_at||Date.now()-new Date(availability.location_updated_at).getTime()>90000)return[];
+ const {data,error}=await supabase.from("rides").select("*").eq("status","requested").order("created_at",{ascending:true});
  if(error)throw error;
  return(data??[]).filter((ride:Ride)=>{
   if(profile.vehicle_type==="motorcycle"&&ride.ride_type!=="courier_motorcycle")return false;
   if(profile.vehicle_type==="car"&&ride.ride_type==="courier_motorcycle")return false;
   if(ride.ride_type==="lotty_xl"&&!profile.women_service_approved)return false;
   if(profile.women_riders_only&&ride.ride_type!=="lotty_xl")return false;
-  return true;
+  return haversineKm({latitude:availability.latitude!,longitude:availability.longitude!},
+   {latitude:ride.pickup_lat,longitude:ride.pickup_lng})<=20;
  }) as Ride[];
 }
 export async function acceptRide(rideId:string,_driverId:string){
