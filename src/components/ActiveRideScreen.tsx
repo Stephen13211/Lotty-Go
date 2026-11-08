@@ -17,7 +17,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
  const [route,setRoute]=useState<Point[]>([]); const [routeDistanceKm,setRouteDistanceKm]=useState<number|null>(null); const [routeEtaMinutes,setRouteEtaMinutes]=useState<number|null>(null); const [message,setMessage]=useState(""); const [busy,setBusy]=useState(false);
  const [quote,setQuote]=useState<WaitingQuote|null>(null); const [seconds,setSeconds]=useState(0); const [sharing,setSharing]=useState(false); const [shareActive,setShareActive]=useState(false); const [showCancelReasons,setShowCancelReasons]=useState(false); const [pinInput,setPinInput]=useState(""); const [pinVerified,setPinVerified]=useState(false);
  const {data:profile}=useQuery({queryKey:["matched-driver",ride.driver_id],queryFn:()=>getMatchedDriverProfile(ride.id),enabled:!driver&&!!ride.driver_id,refetchInterval:15000});
- const {data:messages=[]}=useQuery({queryKey:["ride-messages",ride.id],queryFn:()=>listRideMessages(ride.id),refetchInterval:4000});\n const {data:pickupPin}=useQuery({queryKey:["rider-pickup-pin",ride.id],queryFn:()=>getRiderPickupPin(ride.id),enabled:!driver&&ride.status==="accepted"});
+ const {data:messages=[]}=useQuery({queryKey:["ride-messages",ride.id],queryFn:()=>listRideMessages(ride.id),refetchInterval:4000});
+ const {data:pickupPin}=useQuery({queryKey:["rider-pickup-pin",ride.id],queryFn:()=>getRiderPickupPin(ride.id),enabled:!driver&&ride.status==="accepted"});
  const destination:Point=ride.status==="accepted"?{latitude:ride.pickup_lat,longitude:ride.pickup_lng}:{latitude:ride.dropoff_lat,longitude:ride.dropoff_lng};
  const center=coords??(driver?{latitude:ride.pickup_lat,longitude:ride.pickup_lng}:ride.driver_latitude&&ride.driver_longitude?{latitude:ride.driver_latitude,longitude:ride.driver_longitude}:destination);
  useEffect(()=>{const channel=supabase.channel("ride-"+ride.id).on("postgres_changes",{event:"*",schema:"public",table:"rides",filter:"id=eq."+ride.id},()=>{qc.invalidateQueries({queryKey:["active-ride"]});qc.invalidateQueries({queryKey:["my-rides"]});}).on("postgres_changes",{event:"INSERT",schema:"public",table:"ride_messages",filter:"ride_id=eq."+ride.id},()=>qc.invalidateQueries({queryKey:["ride-messages",ride.id]})).subscribe();return()=>{supabase.removeChannel(channel);};},[ride.id,qc]);
@@ -42,7 +43,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
   ]);
  };
 
- const verifyPin=async()=>{setBusy(true);try{await verifyPickupPin(ride.id,pinInput.trim());setPinVerified(true);setPinInput("");Alert.alert("PIN verified","You can now start the trip.");}catch(e:any){Alert.alert("PIN not accepted",e?.message??"Check the code with the rider.");}finally{setBusy(false);}};\n const arrived=()=>action(()=>markDriverArrived(ride.id),"Could not mark arrival");
+ const verifyPin=async()=>{setBusy(true);try{await verifyPickupPin(ride.id,pinInput.trim());setPinVerified(true);setPinInput("");Alert.alert("PIN verified","You can now start the trip.");}catch(e:any){Alert.alert("PIN not accepted",e?.message??"Check the code with the rider.");}finally{setBusy(false);}};
+ const arrived=()=>action(()=>markDriverArrived(ride.id),"Could not mark arrival");
  const start=()=>action(async()=>{const result=await startTrip(ride.id);Alert.alert("Trip started",result?.final_waiting_fee>0?`Waiting fee added: R${Number(result.final_waiting_fee).toFixed(2)}`:"Your trip has started.");},"Could not start trip");
  const complete=()=>Alert.alert("Complete this trip?","Confirm that the passenger has reached the destination.",[{text:"Not yet",style:"cancel"},{text:"Complete trip",onPress:()=>action(()=>completeTrip(ride.id),"Could not complete trip")}]);
  const fmt=(n:number)=>`${Math.floor(n/60).toString().padStart(2,"0")}:${(n%60).toString().padStart(2,"0")}`;
