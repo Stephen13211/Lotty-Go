@@ -45,14 +45,16 @@ export async function listOpenRides(driverId:string){
    ||!availability.location_updated_at||Date.now()-new Date(availability.location_updated_at).getTime()>90000)return[];
  const {data,error}=await supabase.from("rides").select("*").eq("status","requested").order("created_at",{ascending:true});
  if(error)throw error;
- return(data??[]).filter((ride:Ride)=>{
+ const eligible=(data??[]).filter((ride:Ride)=>{
   if(profile.vehicle_type==="motorcycle"&&ride.ride_type!=="courier_motorcycle")return false;
   if(profile.vehicle_type==="car"&&ride.ride_type==="courier_motorcycle")return false;
   if(ride.ride_type==="lotty_xl"&&!profile.women_service_approved)return false;
   if(profile.women_riders_only&&ride.ride_type!=="lotty_xl")return false;
   return haversineKm({latitude:availability.latitude!,longitude:availability.longitude!},
    {latitude:ride.pickup_lat,longitude:ride.pickup_lng})<=20;
- }) as Ride[];
+ });
+ return eligible.sort((a,b)=>haversineKm({latitude:availability.latitude!,longitude:availability.longitude!},{latitude:a.pickup_lat,longitude:a.pickup_lng})
+  -haversineKm({latitude:availability.latitude!,longitude:availability.longitude!},{latitude:b.pickup_lat,longitude:b.pickup_lng})) as Ride[];
 }
 export async function acceptRide(rideId:string,_driverId:string){
  const {data,error}=await supabase.rpc("claim_ride_request",{p_ride_id:rideId}).single();
