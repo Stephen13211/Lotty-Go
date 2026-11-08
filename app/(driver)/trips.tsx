@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/src/lib/supabase";
 import { listMyRides, type Ride } from "@/src/lib/rides";
 import { colors } from "@/src/theme";
+import RateTrip from "@/src/components/RateTrip";
 
 export default function DriverTrips() {
   const insets = useSafeAreaInsets();
@@ -64,6 +65,7 @@ export default function DriverTrips() {
               <Text style={styles.address}>Pickup: {item.pickup_address}</Text>
               <Text style={styles.address}>Drop-off: {item.dropoff_address}</Text>
               <Text style={styles.status}>{item.status.replace(/_/g, " ").toUpperCase()}</Text>
+              {item.status === "completed" ? <RateTrip rideId={item.id} /> : null}
             </View>
           )}
         />
