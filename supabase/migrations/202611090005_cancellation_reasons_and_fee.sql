@@ -36,7 +36,7 @@ end; $$;
 -- Extend the existing lifecycle guard to permit only the cancellation metadata
 -- alongside a participant cancellation; all route/fare/assignment fields remain immutable.
 create or replace function public.lotty_guard_ride_lifecycle()
-returns trigger language plpgsql set search_path=public as $
+returns trigger language plpgsql set search_path=public as $function$
 begin
  if current_setting('lotty.internal_ride_update',true)='on' then return new; end if;
  if auth.uid() is null then return new; end if;
@@ -59,7 +59,7 @@ begin
    raise exception 'Use the Lotty Go ride actions to update ride progress';
  end if;
  return new;
-end; $;
+end; $function$;
 
 revoke all on function public.cancel_ride_request(uuid,text) from public;
 grant execute on function public.cancel_ride_request(uuid,text) to authenticated;
