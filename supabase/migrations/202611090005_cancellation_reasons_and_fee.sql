@@ -12,7 +12,7 @@ language plpgsql security definer set search_path=public as $$
 declare v_ride public.rides%rowtype; v_fee numeric(10,2):=0; v_distance numeric;
 begin
  if auth.uid() is null then raise exception 'Sign in required'; end if;
- if p_reason not in ('Changed my mind','Booked by mistake','Driver taking too long','Pickup location is wrong','Destination or trip details changed','Found another ride','Safety concern','Other') then
+ if p_reason is null or p_reason not in ('Changed my mind','Booked by mistake','Driver taking too long','Pickup location is wrong','Destination or trip details changed','Found another ride','Safety concern','Other') then
    raise exception 'Choose a valid cancellation reason';
  end if;
  select * into v_ride from public.rides where id=p_ride_id and auth.uid() in(rider_id,driver_id)
