@@ -49,3 +49,31 @@ export async function setWomenOnlyPreference(enabled: boolean) {
   const { error } = await supabase.rpc("set_driver_women_preference", { p_enabled: enabled });
   if (error) throw error;
 }
+
+
+export type DriverAvailability = {
+  driver_id: string;
+  is_online: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  location_updated_at: string | null;
+};
+
+export async function setDriverAvailability(online: boolean, latitude?: number, longitude?: number) {
+  const { error } = await supabase.rpc("set_driver_availability", {
+    p_online: online,
+    p_latitude: latitude ?? null,
+    p_longitude: longitude ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function getDriverAvailability(userId: string) {
+  const { data, error } = await supabase
+    .from("driver_availability")
+    .select("driver_id,is_online,latitude,longitude,location_updated_at")
+    .eq("driver_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as DriverAvailability | null;
+}
