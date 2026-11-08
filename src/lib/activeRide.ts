@@ -38,9 +38,13 @@ export async function sendRideMessage(rideId:string,senderId:string,body:string)
   const {error}=await supabase.from("ride_messages").insert({ride_id:rideId,sender_id:senderId,body:body.trim()});
   if(error)throw error;
 }
-export async function getMatchedDriverProfile(driverId:string) {
-  const {data,error}=await supabase.from("driver_profiles")
-    .select("legal_name,vehicle_make,vehicle_model,vehicle_year,vehicle_registration,profile_photo_url")
-    .eq("user_id",driverId).maybeSingle();
-  if(error)throw error; return data;
+export async function getMatchedDriverProfile(rideId:string) {
+  // The public-profile RPC verifies that the signed-in rider owns this active
+  // ride and returns only the driver's trip identity fields.
+  const {data,error}=await supabase.rpc("get_matched_driver_profile",{p_ride_id:rideId});
+  if(error)throw error;
+  return (data?.[0] ?? null) as {
+    legal_name:string|null;vehicle_make:string|null;vehicle_model:string|null;
+    vehicle_year:number|null;vehicle_registration:string|null;profile_photo_url:string|null;
+  } | null;
 }
