@@ -33,6 +33,34 @@ begin
  cancelled_at=clock_timestamp(),cancellation_fee_amount=v_fee where id=p_ride_id;
  return query select 'cancelled'::text,v_fee,v_distance;
 end; $$;
+-- Extend the existing lifecycle guard to permit only the cancellation metadata
+-- alongside a participant cancellation; all route/fare/assignment fields remain immutable.
+create or replace function public.lotty_guard_ride_lifecycle()
+returns trigger language plpgsql set search_path=public as $
+begin
+ if current_setting('lotty.internal_ride_update',true)='on' then return new; end if;
+ if auth.uid() is null then return new; end if;
+ if old.status='requested' and new.status='accepted' and new.driver_id=auth.uid()
+    and (to_jsonb(new)-'driver_id'-'status') is not distinct from (to_jsonb(old)-'driver_id'-'status') then return new; end if;
+ if new.status='cancelled' and auth.uid() in (old.rider_id,old.driver_id)
+    and (to_jsonb(new)-'status'-'cancellation_reason'-'cancelled_by'-'cancelled_at'-'cancellation_fee_amount')
+      is not distinct from
+        (to_jsonb(old)-'status'-'cancellation_reason'-'cancelled_by'-'cancelled_at'-'cancellation_fee_amount')
+ then return new; end if;
+ if new.driver_arrived_at is distinct from old.driver_arrived_at
+ or new.trip_started_at is distinct from old.trip_started_at
+ or new.trip_completed_at is distinct from old.trip_completed_at
+ or new.waiting_fee_amount is distinct from old.waiting_fee_amount
+ or new.waiting_fee_minutes is distinct from old.waiting_fee_minutes
+ or new.driver_latitude is distinct from old.driver_latitude
+ or new.driver_longitude is distinct from old.driver_longitude
+ or new.driver_location_updated_at is distinct from old.driver_location_updated_at
+ or new.status is distinct from old.status then
+   raise exception 'Use the Lotty Go ride actions to update ride progress';
+ end if;
+ return new;
+end; $;
+
 revoke all on function public.cancel_ride_request(uuid,text) from public;
 grant execute on function public.cancel_ride_request(uuid,text) to authenticated;
 commit;
