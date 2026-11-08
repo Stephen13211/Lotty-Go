@@ -46,7 +46,8 @@ This document defines the first public-release scope. New ideas outside this lis
 - Manual driver approval and private document storage.
 - Review applicable South African ID, driving licence, PrDP, vehicle/operating documents, roadworthiness, insurance and safety screening requirements with qualified local guidance.
 - Rider and driver ratings, report-a-problem and support contact.
-- Share-trip details/trusted contact and emergency help flow.
+- Secure live trip sharing by phone share sheet (WhatsApp, SMS, email and other compatible apps), with an expiring public link that stops when the trip ends.
+- Trusted contact and emergency help flow.
 - Privacy controls, consent, data retention and POPIA review.
 - Clear rider/driver terms, fare and fee disclosure, cancellation policy and incident escalation.
 
@@ -92,5 +93,6 @@ This document defines the first public-release scope. New ideas outside this lis
 - Driver online state is currently local UI state; no durable online heartbeat/location directory.
 - Driver live location currently publishes only during an assigned active ride.
 - No server-enforced R10 cancellation fee/reason flow yet.
-- Pickup PIN, share-trip/emergency workflow, ratings and support workflow need verification/implementation.
+- Pickup PIN, emergency workflow, ratings and support workflow need verification/implementation.
+- Trip sharing code is committed, but its SQL migration and public Edge Function still need deployment and two-phone testing.
 - Card collection and automatic 75/25 bank payout are not integrated.
