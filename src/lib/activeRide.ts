@@ -75,3 +75,15 @@ export async function cancelRide(rideId:string,reason:string) {
   if(error)throw error;
   return (data?.[0] ?? null) as {cancelled_status:string;cancellation_fee:number;driver_distance_km:number|null} | null;
 }
+
+export async function getRiderPickupPin(rideId:string) {
+  const {data,error}=await supabase.from("ride_pickup_pins").select("pin_value,verified_at")
+    .eq("ride_id",rideId).maybeSingle();
+  if(error)throw error;
+  return data as {pin_value:string;verified_at:string|null}|null;
+}
+export async function verifyPickupPin(rideId:string,pin:string) {
+  const {data,error}=await supabase.rpc("verify_ride_pickup_pin",{p_ride_id:rideId,p_pin:pin});
+  if(error)throw error;
+  return data===true;
+}
