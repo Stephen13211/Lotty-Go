@@ -55,11 +55,11 @@ This document defines the first public-release scope. New ideas outside this lis
 - Admin-only driver/document approval and rejection notes.
 - Configurable waiting and cancellation fee settings.
 - Ride search/oversight, support/dispute handling, audit trail.
-- Driver earnings ledger with the agreed 75/25 calculation.
+- Driver earnings estimate and cash collection confirmation with a 75/25 commission ledger; admin can record receipt of cash commission.
 - No claim of automatic bank payouts until a supported payout provider and reconciliation flow are integrated.
 
 ### Payments
-- Cash ride recording and settlement status.
+- Cash ride recording and settlement status, with driver confirmation and an admin commission-received queue.
 - Card payment collection, webhook verification, refunds and reconciliation before enabling card in the app.
 - Driver 75% / Lotty Go 25% split calculated server-side.
 - Verify a compliant provider can pay drivers directly to ordinary bank accounts; do not assume PayFast supports the required marketplace split/payout workflow.
@@ -103,7 +103,8 @@ Verified in the connected Supabase project:
 - Core trip, matching, waiting-fee, cancellation, trip-sharing and pickup-PIN tables/functions exist.
 - `trip-share` Edge Function is deployed with JWT verification disabled; its token validation is handled in the function.
 - Database execute grants were hardened: anonymous callers cannot execute the app RPC functions; signed-in users retain only the intended RPC access.
-- Ratings, support-report and emergency-contact schema/functions are installed.\n- Cash collection confirmation and 75/25 cash commission settlement ledger are installed.
+- Ratings, support-report and emergency-contact schema/functions are installed.
+- Cash collection confirmation and 75/25 cash commission settlement ledger are installed.
 
 Remaining before public launch:
 - Run TypeScript and Android export checks on the latest commit and resolve any failures.
