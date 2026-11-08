@@ -56,7 +56,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
   </MapView>
   <ScrollView style={s.sheet} contentContainerStyle={{padding:spacing.lg,gap:spacing.md}}>
    <Text style={s.title}>{driver?"Active ride":statusText}</Text>
-   <Text style={s.muted}>{ride.status==="accepted"?"Pickup: "+ride.pickup_address:"Destination: "+ride.dropoff_address}</Text>\n   {routeEtaMinutes!=null?<Text style={s.routeEta}>{driver?(ride.status==="accepted"?"To pickup":"To destination"):"Driver route estimate"} · {routeEtaMinutes} min · {routeDistanceKm?.toFixed(1)??"—"} km</Text>:null}
+   <Text style={s.muted}>{ride.status==="accepted"?"Pickup: "+ride.pickup_address:"Destination: "+ride.dropoff_address}</Text>
+   {routeEtaMinutes!=null?<Text style={s.routeEta}>{driver?(ride.status==="accepted"?"To pickup":"To destination"):"Driver route estimate"} · {routeEtaMinutes} min · {routeDistanceKm?.toFixed(1)??"—"} km</Text>:null}
    {!driver&&ride.driver_id?<View style={s.profile}>
     {profile?.profile_photo_url?<Image source={{uri:profile.profile_photo_url}} style={s.photo}/>:<View style={s.photoFallback}><Icon name="account" size={30} color={colors.onBrandPrimary}/></View>}
     <View style={{flex:1,gap:3}}><Text style={s.name}>{driverName}</Text><Text style={s.muted}>{[profile?.vehicle_make,profile?.vehicle_model,profile?.vehicle_year].filter(Boolean).join(" ")||"Vehicle details pending"}</Text><Text style={s.plate}>{profile?.vehicle_registration||"Registration pending"}</Text></View>
