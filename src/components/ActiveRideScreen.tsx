@@ -34,7 +34,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
  const driverDistanceKm=ride.driver_latitude!=null&&ride.driver_longitude!=null?(()=>{const rad=(n:number)=>n*Math.PI/180;const dLat=rad(ride.driver_latitude!-ride.pickup_lat),dLng=rad(ride.driver_longitude!-ride.pickup_lng);const a=Math.sin(dLat/2)**2+Math.cos(rad(ride.pickup_lat))*Math.cos(rad(ride.driver_latitude!))*Math.sin(dLng/2)**2;return 6371*2*Math.asin(Math.sqrt(a));})():null;
  const chooseCancel=(reason:string)=>{
   setShowCancelReasons(false);
-  const likelyFee=!driver&&ride.status==="accepted"&&driverDistanceKm!=null&&driverDistanceKm<1;
+  const locationFresh=!!ride.driver_location_updated_at&&Date.now()-new Date(ride.driver_location_updated_at).getTime()<120000;
+  const likelyFee=!driver&&ride.status==="accepted"&&locationFresh&&driverDistanceKm!=null&&driverDistanceKm<1;
   Alert.alert("Confirm cancellation",likelyFee?"Your driver is less than 1 km from pickup. A R10 cancellation fee will be recorded. Do you want to continue?":"Are you sure you want to cancel this trip?",[
    {text:"Keep trip",style:"cancel"},
    {text:"Cancel trip",style:"destructive",onPress:async()=>{try{const result=await cancelRide(ride.id,reason);qc.invalidateQueries({queryKey:["active-ride"]});qc.invalidateQueries({queryKey:["my-rides"]});Alert.alert("Trip cancelled",result?.cancellation_fee? "A R10 cancellation fee has been recorded. Actual collection will be enabled with the payment system.":"Your trip has been cancelled.");}catch(e:any){Alert.alert("Could not cancel",e?.message??"Please try again.");}}}
