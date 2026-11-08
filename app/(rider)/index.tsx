@@ -5,11 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import ActiveRideScreen from "@/src/components/ActiveRideScreen";
+import ActiveRideScreen from "@/src/components/ActiveRideScreen";\nimport RideMatchingScreen from "@/src/components/RideMatchingScreen";
 import { MapView, Marker, Polyline } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
 import { createRide, estimateFare, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
-import { getActiveRide } from "@/src/lib/activeRide";
+import { getActiveRide, getRequestedRide } from "@/src/lib/activeRide";
 import { colors, radius, spacing } from "@/src/theme";
 
 type Coords = { latitude: number; longitude: number };
@@ -110,7 +110,7 @@ export default function RiderHome() {
   const sheetRef = useRef<BottomSheet>(null);
   const snaps = useMemo(() => ["62%", "90%"], []);
   const { session, configured } = useAuth();
-  const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 4000 });
+  const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 4000 });\n  const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 4000 });
   const [pickupText, setPickupText] = useState("");
   const [pickup, setPickup] = useState<Place | null>(null);
   const [destinationText, setDestinationText] = useState("");
@@ -256,7 +256,7 @@ export default function RiderHome() {
 
   const mapCenter = pickup?.coords ?? FALLBACK;
   const mapLine = roadRouteCoordinates.length > 1 ? roadRouteCoordinates : routePoints.map(point => point.coords);
-  if (activeRide) return <ActiveRideScreen ride={activeRide} role="rider" />;
+  if (activeRide) return <ActiveRideScreen ride={activeRide} role="rider" />;\n  if (requestedRide) return <RideMatchingScreen ride={requestedRide} />;
 
   return (
     <View style={{ flex: 1 }}>
