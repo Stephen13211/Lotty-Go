@@ -11,7 +11,14 @@ export async function getActiveRide(userId: string, role: "rider" | "driver") {
   if (error) throw error;
   return data as Ride | null;
 }
-export async function markDriverArrived(rideId:string) {
+
+export async function getRequestedRide(userId:string) {
+  const {data,error}=await supabase.from("rides").select("*").eq("rider_id",userId)
+    .eq("status","requested").order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;
+  return data as Ride|null;
+}
+\nexport async function markDriverArrived(rideId:string) {
   const {data,error}=await supabase.rpc("driver_arrive_at_pickup",{p_ride_id:rideId});
   if(error)throw error; return data as string;
 }
