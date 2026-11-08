@@ -1,6 +1,8 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
 import * as Location from "expo-location";
 import { useEffect, useMemo, useState } from "react";
+import { Linking } from "react-native";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapView, Marker, Polyline } from "@/src/components/map";
@@ -12,7 +14,7 @@ import { colors, radius, spacing } from "@/src/theme";
 
 type Point={latitude:number;longitude:number};
 export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"driver"}) {
- const {session}=useAuth(); const qc=useQueryClient();
+ const {session}=useAuth(); const qc=useQueryClient(); const router=useRouter();
  const driver=role==="driver"; const [coords,setCoords]=useState<Point|null>(null);
  const [route,setRoute]=useState<Point[]>([]); const [routeDistanceKm,setRouteDistanceKm]=useState<number|null>(null); const [routeEtaMinutes,setRouteEtaMinutes]=useState<number|null>(null); const [message,setMessage]=useState(""); const [busy,setBusy]=useState(false);
  const [quote,setQuote]=useState<WaitingQuote|null>(null); const [seconds,setSeconds]=useState(0); const [sharing,setSharing]=useState(false); const [shareActive,setShareActive]=useState(false); const [showCancelReasons,setShowCancelReasons]=useState(false); const [pinInput,setPinInput]=useState(""); const [pinVerified,setPinVerified]=useState(false);
@@ -47,6 +49,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
  const arrived=()=>action(()=>markDriverArrived(ride.id),"Could not mark arrival");
  const start=()=>action(async()=>{const result=await startTrip(ride.id);Alert.alert("Trip started",result?.final_waiting_fee>0?`Waiting fee added: R${Number(result.final_waiting_fee).toFixed(2)}`:"Your trip has started.");},"Could not start trip");
  const complete=()=>Alert.alert("Complete this trip?","Confirm that the passenger has reached the destination.",[{text:"Not yet",style:"cancel"},{text:"Complete trip",onPress:()=>action(()=>completeTrip(ride.id),"Could not complete trip")}]);
+ const emergency=()=>Alert.alert("Emergency assistance","If anyone is in immediate danger, call South Africa's emergency number 112. Lotty Go will also record an urgent safety report for this active trip.",[{text:"Cancel",style:"cancel"},{text:"Call 112",style:"destructive",onPress:async()=>{try{const {error}=await supabase.rpc("submit_ride_emergency_alert",{p_ride_id:ride.id,p_details:"Emergency assistance requested during an active Lotty Go trip"});if(error)throw error;}catch(e:any){Alert.alert("Report not saved",e?.message??"You can still call emergency services now.");}try{await Linking.openURL("tel:112");}catch{Alert.alert("Call unavailable","Please dial 112 manually from your phone.");}}}]);
+ const reportIssue=()=>router.push({pathname:"/report-issue",params:{rideId:ride.id}});
  const fmt=(n:number)=>`${Math.floor(n/60).toString().padStart(2,"0")}:${(n%60).toString().padStart(2,"0")}`;
  const mapCenter=coords??destination;
  const driverName=profile?.legal_name||"Your driver";
@@ -75,6 +79,8 @@ export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"dr
    {driver&&ride.status==="accepted"&&ride.driver_arrived_at?<View style={s.wait}><Text style={s.waitTitle}>Passenger waiting time</Text><Text style={s.timer}>{fmt(seconds)}</Text>{!pinVerified?<><Text style={s.muted}>Ask the rider for their four-digit pickup PIN.</Text><TextInput value={pinInput} onChangeText={setPinInput} keyboardType="number-pad" maxLength={4} placeholder="Enter pickup PIN" placeholderTextColor={colors.muted} style={s.input}/><Pressable disabled={busy||pinInput.length!==4} onPress={verifyPin} style={s.primary}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>Verify pickup PIN</Text>}</Pressable></>:<Text style={s.pinVerified}>Pickup PIN verified</Text>}<Text style={s.muted}>{seconds<(quote?.free_minutes??2)*60?`${Math.ceil(((quote?.free_minutes??2)*60-seconds)/60)} free minute(s) remaining`:`Waiting fee active · R${Number(quote?.waiting_fee??0).toFixed(2)} so far`}</Text><Pressable disabled={busy||!pinVerified} onPress={start} style={[s.primary,!pinVerified&&{opacity:0.45}]}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>Start trip</Text>}</Pressable></View>:null}
    {driver&&ride.status==="in_progress"?<Pressable disabled={busy} onPress={complete} style={s.primary}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>Complete trip</Text>}</Pressable>:null}
    {!driver&&ride.status==="accepted"&&ride.driver_arrived_at?<View style={s.notice}><Text style={s.noticeText}>{quote?.charging_started?"Waiting charges have started.":`Your first ${quote?.free_minutes??2} minutes after arrival are free.`}</Text>{quote?.charging_started?<Text style={s.noticeText}>Current waiting fee: R{Number(quote.waiting_fee).toFixed(2)}</Text>:null}</View>:null}
+   <Pressable onPress={emergency} style={[s.cancelButton,{borderWidth:1,borderColor:colors.error,borderRadius:radius.pill}]}><Text style={[s.cancelButtonText,{fontSize:14}]}>Emergency help · Call 112</Text></Pressable>
+   <Pressable onPress={reportIssue} style={s.shareButton}><Icon name="alert-circle-outline" size={19} color={colors.onSurface}/><Text style={s.shareText}>Report a problem</Text></Pressable>
    <Text style={s.section}>IN-APP CHAT</Text>
    <View style={s.chat}>{messages.map(m=><View key={m.id} style={[s.bubble,m.sender_id===session?.user.id?s.mine:s.theirs]}><Text style={s.bubbleText}>{m.body}</Text></View>)}</View>
    <View style={s.composer}><TextInput value={message} onChangeText={setMessage} placeholder="Write a message…" placeholderTextColor={colors.muted} style={s.input}/><Pressable onPress={send} style={s.send}><Icon name="send" size={20} color="#fff"/></Pressable></View>
