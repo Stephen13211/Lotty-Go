@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, SUPABASE_URL } from "./supabase";
 import type { Ride } from "./rides";
 
 export type RideMessage = { id: string; ride_id: string; sender_id: string; body: string; created_at: string };
@@ -47,4 +47,12 @@ export async function getMatchedDriverProfile(rideId:string) {
     legal_name:string|null;vehicle_make:string|null;vehicle_model:string|null;
     vehicle_year:number|null;vehicle_registration:string|null;profile_photo_url:string|null;
   } | null;
+}
+
+export async function createTripShareLink(rideId:string) {
+  const {data,error}=await supabase.rpc("create_trip_share_link",{p_ride_id:rideId});
+  if(error)throw error;
+  if(typeof data!=="string"||!data)throw new Error("Could not create a trip-sharing link");
+  const base=SUPABASE_URL.replace(/\/+$/,"");
+  return `${base}/functions/v1/trip-share?token=${encodeURIComponent(data)}`;
 }
