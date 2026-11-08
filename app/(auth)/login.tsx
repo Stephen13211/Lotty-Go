@@ -12,7 +12,7 @@ export default function Login() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const { signIn, configured } = useAuth();
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null); const [showSignupPrompt, setShowSignupPrompt] = useState(false); const [busy, setBusy] = useState(false);
 
   const resetPassword = async () => {
     if (!configured) { setErr("Supabase is not configured yet."); return; }
@@ -28,9 +28,17 @@ export default function Login() {
 
   const submit = async () => {
     if (!configured) { setErr("Add Supabase URL + anon key in .env."); return; }
-    setErr(null); setBusy(true);
+    setErr(null); setShowSignupPrompt(false); setBusy(true);
     try { await signIn(email.trim(), password); router.replace("/"); }
-    catch (e: any) { setErr(e?.message ?? "Login failed"); }
+    catch (e: any) {
+      const message = String(e?.message ?? "");
+      if (message.toLowerCase().includes("invalid login credentials")) {
+        setErr("Email or password is incorrect. If you haven't created a Lotty Go account yet, you can create one below.");
+        setShowSignupPrompt(true);
+      } else {
+        setErr(message || "Login failed. Please try again.");
+      }
+    }
     finally { setBusy(false); }
   };
 
@@ -47,7 +55,18 @@ export default function Login() {
         <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" placeholderTextColor={colors.muted} style={s.input} />
         <Text style={s.label}>Password</Text>
         <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.muted} style={s.input} />
-        {err && <Text style={{ color: colors.error }}>{err}</Text>}
+        {err && (
+          <View style={{ gap: spacing.sm }}>
+            <Text style={{ color: colors.error }}>{err}</Text>
+            {showSignupPrompt && (
+              <Link href={{ pathname: "/(auth)/signup", params: { role: role ?? "rider" } }} asChild>
+                <Pressable style={{ alignSelf: "flex-start", paddingVertical: spacing.xs }}>
+                  <Text style={{ color: colors.brandPrimary, fontWeight: "800" }}>Create a Lotty Go account</Text>
+                </Pressable>
+              </Link>
+            )}
+          </View>
+        )}
         <Pressable onPress={resetPassword} disabled={busy} style={{ alignSelf: "flex-end", paddingVertical: spacing.xs }}><Text style={{ color: colors.brandPrimary, fontWeight: "700" }}>Forgot password?</Text></Pressable>
 
         <Pressable onPress={submit} disabled={busy} style={[s.cta, { opacity: busy ? 0.8 : 1 }]}>
