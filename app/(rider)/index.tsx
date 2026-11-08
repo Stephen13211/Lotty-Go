@@ -296,13 +296,12 @@ export default function RiderHome() {
               {pickup ? <Text style={s.selectedText}>Pickup selected</Text> : null}
             </View>
             <View style={s.locationDivider} />
-            <PlaceInput label="DESTINATION" value={destinationText} placeholder="Where would you like to go?"
-              icon="map-marker-check" onChangeText={value => { setDestinationText(value); setDestination(null); }}
-              onSelect={selectDestination} rightAction={
-                <Pressable onPress={() => setStops(old => [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={s.plusButton}>
-                  <Icon name="plus" size={22} color={colors.onBrandPrimary} />
-                </Pressable>
-              } />
+            <View style={s.actionRow}>
+              <Text style={s.locationLabel}>ADD STOPS (OPTIONAL · UP TO 2)</Text>
+              <Pressable disabled={stops.length >= 2} onPress={() => setStops(old => old.length >= 2 ? old : [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={[s.plusButton, stops.length >= 2 && { opacity: 0.4 }]}>
+                <Icon name="plus" size={22} color={colors.onBrandPrimary} />
+              </Pressable>
+            </View>
             {stops.map((stop, index) => (
               <View key={stop.id} style={s.stopWrap}>
                 <PlaceInput label={`STOP ${index + 1}`} value={stop.label} placeholder="Add another stop"
@@ -314,6 +313,10 @@ export default function RiderHome() {
                   } />
               </View>
             ))}
+            <View style={s.locationDivider} />
+            <PlaceInput label="DESTINATION" value={destinationText} placeholder="Where would you like to go?"
+              icon="map-marker-check" onChangeText={value => { setDestinationText(value); setDestination(null); }}
+              onSelect={selectDestination} />
             {destination ? <Text style={s.selectedText}>Destination selected · Route updates on map</Text> : null}
           </View>
 
@@ -339,21 +342,17 @@ export default function RiderHome() {
           {selectedRide === "courier_motorcycle" ? <View style={{ gap: spacing.xs }}><Text style={s.section}>DELIVERY INSTRUCTIONS</Text><TextInput value={courierNotes} onChangeText={setCourierNotes} placeholder="Describe the parcel and any pickup or drop-off instructions" placeholderTextColor={colors.muted} multiline style={s.courierInput} /></View> : null}
           <Text style={s.section}>CHOOSE PAYMENT METHOD</Text>
           <View style={s.paymentRow}>
-            <Pressable onPress={() => setPayment("cash")} style={[s.paymentOption, payment === "cash" && s.paymentActive]}>
+            <View style={[s.paymentOption, s.paymentActive]}>
               <Icon name="cash" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Cash</Text>
-              {payment === "cash" && <Icon name="check-circle" size={18} color={colors.brandPrimary} />}
-            </Pressable>
-            <Pressable onPress={() => setPayment("card")} style={[s.paymentOption, payment === "card" && s.paymentActive]}>
-              <Icon name="credit-card-outline" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Card</Text>
-              {payment === "card" && <Icon name="check-circle" size={18} color={colors.brandPrimary} />}
-            </Pressable>
+              <Icon name="check-circle" size={18} color={colors.brandPrimary} />
+            </View>
           </View>
-          <Text style={s.paymentNote}>Card selection is shown, but card charging is not connected yet.</Text>
+          <Text style={s.paymentNote}>Cash is currently the only enabled payment method. Card payments will appear once secure collection and driver payouts are connected.</Text>
           <Pressable onPress={confirmRide} disabled={busy || selectedOption.available === false}
             style={[s.cta, (busy || selectedOption.available === false) && { opacity: 0.55 }]}>
             {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaText}>Confirm Ride{routePoints.length > 1 ? ` · R${estimateFare(km, selectedOption.multiplier)}` : ""}</Text>}
           </Pressable>
-          <Text style={s.hint}>Choose a pickup and destination from the suggestions. Use the + beside destination to add stops.</Text>
+          <Text style={s.hint}>Choose a pickup and destination from the suggestions. Add up to two stops between pickup and destination.</Text>
         </BottomSheetScrollView>
       </BottomSheet>
     </View>
