@@ -87,12 +87,31 @@ This document defines the first public-release scope. New ideas outside this lis
 5. Payment collection, payout and refund paths are tested with the provider before any paid rides are enabled.
 6. South African legal, safety, insurance, privacy and operating requirements are reviewed before public launch.
 
-## Current known implementation gaps
-- Rider's driver-profile helper must use `get_matched_driver_profile(p_ride_id)`, not direct table access.
-- Rider request currently saves a ride then shows an alert; no proper matching/search screen.
-- Driver online state is currently local UI state; no durable online heartbeat/location directory.
-- Driver live location currently publishes only during an assigned active ride.
-- No server-enforced R10 cancellation fee/reason flow yet.
-- Pickup PIN, emergency workflow, ratings and support workflow need verification/implementation.
-- Trip sharing code is committed, but its SQL migration and public Edge Function still need deployment and two-phone testing.
-- Card collection and automatic 75/25 bank payout are not integrated.
+## Current implementation status and remaining release gates
+
+Implemented in the app/database code:
+- Rider/driver authentication, role-aware screens, password-reset route and deep-link scheme `lottygo://`.
+- Rider booking with pickup, destination and up to two stops; cash-only until a card gateway is connected.
+- Server-side driver availability heartbeat, eligibility checks and atomic ride claiming.
+- Rider matching screen and active-ride lifecycle.
+- Live location/route ETA, participant chat, trip sharing, pickup PIN, configurable waiting fee and cancellation reason/R10 fee recording.
+- Driver document review and admin approval; waiting-fee admin controls.
+- Trip history, one rating per trip participant, support reports, admin support queue and trusted emergency-contact storage.
+- Active-trip emergency button records an urgent report and opens the phone dialler for South African emergency number 112.
+
+Verified in the connected Supabase project:
+- Core trip, matching, waiting-fee, cancellation, trip-sharing and pickup-PIN tables/functions exist.
+- `trip-share` Edge Function is deployed with JWT verification disabled; its token validation is handled in the function.
+- Database execute grants were hardened: anonymous callers cannot execute the app RPC functions; signed-in users retain only the intended RPC access.
+- Ratings, support-report and emergency-contact schema/functions are installed.
+
+Remaining before public launch:
+- Run TypeScript and Android export checks on the latest commit and resolve any failures.
+- Test real two-phone ride lifecycle, pickup PIN, waiting fee, cancellation boundary, trip-sharing link expiry/revocation and ratings.
+- Enable and verify leaked-password protection in Supabase Auth.
+- Configure and test password-reset email delivery and the `lottygo://reset-password` redirect on a real device.
+- Emergency contact details are stored but are not automatically messaged; emergency button records an in-app report and opens the phone dialler. It does not dispatch emergency services.
+- Add operational notifications for support/emergency reports and a staffed response process before launch.
+- Card collection, refunds, reconciliation, cancellation-fee collection and automatic 75/25 driver bank payouts are not integrated. The database can calculate the split, but cannot send money to drivers.
+- Confirm South African licensing, PrDP, operating licence, insurance, criminal-record screening, consumer terms, POPIA and incident-response obligations with qualified local advisers.
+- The Supabase migration-list API currently reports no tracked migration history even though the schema objects are present (they were previously applied through SQL Editor). Do not run `supabase db push` until the existing database migrations are safely reconciled with the CLI migration history.
