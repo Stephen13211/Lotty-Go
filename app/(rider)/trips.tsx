@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
 import { listMyRides, type Ride } from "@/src/lib/rides";
 import { colors, radius, spacing } from "@/src/theme";
+import RateTrip from "@/src/components/RateTrip";
 
 const STATUS: Record<string,string> = { requested: colors.warning, accepted: "#1976D2", in_progress: colors.brandPrimary, completed: colors.success, cancelled: colors.error };
 
 export default function Trips() {
   const insets = useSafeAreaInsets();
-  const { configured } = useAuth();
+  const { configured, session } = useAuth();
   const { data, isLoading, refetch, isFetching } = useQuery({ queryKey: ["my-rides"], queryFn: listMyRides, enabled: configured });
 
   const render = ({ item }: { item: Ride }) => (
@@ -23,6 +24,7 @@ export default function Trips() {
         <Text style={{ color: colors.muted, fontSize: 13 }}>R{item.fare} · {item.distance_km} km</Text>
         <View style={[s.pill, { backgroundColor: STATUS[item.status] ?? colors.muted }]}><Text style={{ color: "#fff", fontSize: 11, fontWeight: "700", textTransform: "capitalize" }}>{item.status.replace("_"," ")}</Text></View>
       </View>
+      {item.status === "completed" && session?.user.id ? <RateTrip rideId={item.id} /> : null}
     </View>
   );
 
