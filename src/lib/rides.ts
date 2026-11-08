@@ -48,8 +48,8 @@ export async function listOpenRides(driverId:string){
   return true;
  }) as Ride[];
 }
-export async function acceptRide(rideId:string,driverId:string){
- const {data,error}=await supabase.from("rides").update({driver_id:driverId,status:"accepted"}).eq("id",rideId).eq("status","requested").select().single();
+export async function acceptRide(rideId:string,_driverId:string){
+ const {data,error}=await supabase.rpc("claim_ride_request",{p_ride_id:rideId}).single();
  if(error)throw error;return data as Ride;
 }
 export async function updateRideStatus(rideId:string,status:RideStatus){
