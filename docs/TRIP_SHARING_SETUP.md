@@ -18,7 +18,7 @@ From the repository root, with the Supabase CLI linked to the correct Lotty Go p
 supabase functions deploy trip-share --no-verify-jwt
 ```
 
-The function must be deployed with JWT verification disabled because the recipient is not signed in. The function itself validates a 256-bit random token, checks expiry and active ride status, and uses the server-side service-role key only inside the Edge Function. Never put the service-role key in the app or share URL.
+The function must be deployed with JWT verification disabled because the recipient is not signed in. The function itself validates a high-entropy random token, checks expiry and active ride status, and uses the server-side service-role key only inside the Edge Function. Never put the service-role key in the app or share URL.
 
 Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to deployed Edge Functions. Confirm both are available in the function environment.
 
