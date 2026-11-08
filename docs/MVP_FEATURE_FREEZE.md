@@ -103,7 +103,7 @@ Verified in the connected Supabase project:
 - Core trip, matching, waiting-fee, cancellation, trip-sharing and pickup-PIN tables/functions exist.
 - `trip-share` Edge Function is deployed with JWT verification disabled; its token validation is handled in the function.
 - Database execute grants were hardened: anonymous callers cannot execute the app RPC functions; signed-in users retain only the intended RPC access.
-- Ratings, support-report and emergency-contact schema/functions are installed.
+- Ratings, support-report and emergency-contact schema/functions are installed.\n- Cash collection confirmation and 75/25 cash commission settlement ledger are installed.
 
 Remaining before public launch:
 - Run TypeScript and Android export checks on the latest commit and resolve any failures.
@@ -112,6 +112,6 @@ Remaining before public launch:
 - Configure and test password-reset email delivery and the `lottygo://reset-password` redirect on a real device.
 - Emergency contact details are stored but are not automatically messaged; emergency button records an in-app report and opens the phone dialler. It does not dispatch emergency services.
 - Add operational notifications for support/emergency reports and a staffed response process before launch.
-- Card collection, refunds, reconciliation, cancellation-fee collection and automatic 75/25 driver bank payouts are not integrated. The database can calculate the split, but cannot send money to drivers.
+- Card collection, refunds, cancellation-fee collection and automatic 75/25 driver bank payouts are not integrated. Cash commission can be recorded, but actual commission transfers are still handled outside the app; the database cannot send money to drivers.
 - Confirm South African licensing, PrDP, operating licence, insurance, criminal-record screening, consumer terms, POPIA and incident-response obligations with qualified local advisers.
 - The Supabase migration-list API currently reports no tracked migration history even though the schema objects are present (they were previously applied through SQL Editor). Do not run `supabase db push` until the existing database migrations are safely reconciled with the CLI migration history.
