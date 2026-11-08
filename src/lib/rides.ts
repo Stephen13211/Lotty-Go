@@ -9,7 +9,7 @@ export type Ride = {
  dropoff_address:string;dropoff_lat:number;dropoff_lng:number;
  stops?:{address:string;latitude:number;longitude:number}[];
  ride_type:RideType;payment_method:PaymentMethod;fare:number;distance_km:number;
- status:RideStatus;created_at:string;service_notes?:string|null; driver_arrived_at?:string|null; trip_started_at?:string|null; trip_completed_at?:string|null; waiting_fee_amount?:number; waiting_fee_minutes?:number; driver_latitude?:number|null; driver_longitude?:number|null; driver_location_updated_at?:string|null;
+ status:RideStatus;created_at:string;payment_status?:string;cash_collected_at?:string|null;service_notes?:string|null; driver_arrived_at?:string|null; trip_started_at?:string|null; trip_completed_at?:string|null; waiting_fee_amount?:number; waiting_fee_minutes?:number; driver_latitude?:number|null; driver_longitude?:number|null; driver_location_updated_at?:string|null;
 };
 
 export const RIDE_OPTIONS:{type:RideType;name:string;seats:number;multiplier:number;icon:string;available?:boolean}[]=[
