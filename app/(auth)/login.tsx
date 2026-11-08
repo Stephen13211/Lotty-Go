@@ -14,7 +14,7 @@ export default function Login() {
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
 
-  const submit = async () => {
+  const resetPassword = async () => {\n    if (!configured) { setErr("Supabase is not configured yet."); return; }\n    if (!email.trim()) { setErr("Enter your email address first."); return; }\n    setErr(null); setBusy(true);\n    try {\n      const { error } = await (await import("@/src/lib/supabase")).supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: "lottygo://reset-password" });\n      if (error) throw error;\n      setErr("Password reset email sent. Open the link on this phone to choose a new password.");\n    } catch (e: any) { setErr(e?.message ?? "Could not send reset email."); }\n    finally { setBusy(false); }\n  };\n\n  const submit = async () => {
     if (!configured) { setErr("Add Supabase URL + anon key in .env."); return; }
     setErr(null); setBusy(true);
     try { await signIn(email.trim(), password); router.replace("/"); }
@@ -35,7 +35,7 @@ export default function Login() {
         <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" placeholderTextColor={colors.muted} style={s.input} />
         <Text style={s.label}>Password</Text>
         <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.muted} style={s.input} />
-        {err && <Text style={{ color: colors.error }}>{err}</Text>}
+        {err && <Text style={{ color: colors.error }}>{err}</Text>}\n        <Pressable onPress={resetPassword} disabled={busy} style={{ alignSelf: "flex-end", paddingVertical: spacing.xs }}><Text style={{ color: colors.brandPrimary, fontWeight: "700" }}>Forgot password?</Text></Pressable>
 
         <Pressable onPress={submit} disabled={busy} style={[s.cta, { opacity: busy ? 0.8 : 1 }]}>
           {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Log in</Text>}
