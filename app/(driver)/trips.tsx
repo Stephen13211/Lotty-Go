@@ -13,6 +13,7 @@ import { supabase } from "@/src/lib/supabase";
 import { listMyRides, type Ride } from "@/src/lib/rides";
 import { colors } from "@/src/theme";
 import RateTrip from "@/src/components/RateTrip";
+import ConfirmCashPayment from "@/src/components/ConfirmCashPayment";
 
 export default function DriverTrips() {
   const insets = useSafeAreaInsets();
@@ -65,6 +66,7 @@ export default function DriverTrips() {
               <Text style={styles.address}>Pickup: {item.pickup_address}</Text>
               <Text style={styles.address}>Drop-off: {item.dropoff_address}</Text>
               <Text style={styles.status}>{item.status.replace(/_/g, " ").toUpperCase()}</Text>
+              {item.status === "completed" && item.payment_method === "cash" && item.payment_status !== "paid" ? <ConfirmCashPayment rideId={item.id} /> : null}
               {item.status === "completed" ? <RateTrip rideId={item.id} /> : null}
             </View>
           )}
