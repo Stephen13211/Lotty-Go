@@ -1,6 +1,6 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
@@ -29,6 +29,8 @@ export default function DriverApplication() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [legalName, setLegalName] = useState(session?.user.user_metadata?.full_name ?? "");
   const [phone, setPhone] = useState("");
@@ -40,7 +42,7 @@ export default function DriverApplication() {
     if (!session) { setLoading(false); return; }
     getDriverProfile(session.user.id).then(p => {
       setProfile(p);
-      if (p) { setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenOnly(!!p.women_riders_only); }
+      if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenOnly(!!p.women_riders_only); }
     }).catch(e => Alert.alert("Could not load application", e.message)).finally(() => setLoading(false));
   }, [session?.user.id]);
 
@@ -85,6 +87,28 @@ export default function DriverApplication() {
     }
   };
 
+  const uploadProfilePhoto = async () => {
+    if (!session || !configured) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ["image/jpeg", "image/png"], copyToCacheDirectory: true, multiple: false });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      if (asset.size && asset.size > 5 * 1024 * 1024) { Alert.alert("Image too large", "Choose an image smaller than 5 MB."); return; }
+      setPhotoUploading(true);
+      const path = `${session.user.id}/profile-${Date.now()}.jpg`;
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const { error } = await supabase.storage.from("driver-profile-photos").upload(path, blob, { contentType: asset.mimeType ?? "image/jpeg", upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("driver-profile-photos").getPublicUrl(path);
+      const { error: saveError } = await supabase.rpc("set_driver_profile_photo", { p_photo_url: data.publicUrl });
+      if (saveError) throw saveError;
+      setPhotoUrl(data.publicUrl);
+      Alert.alert("Photo updated", "Your driver profile photo is saved.");
+    } catch (e: any) { Alert.alert("Photo upload failed", e?.message ?? "Please try again."); }
+    finally { setPhotoUploading(false); }
+  };
+
   const submit = async () => {
     if (!session || !configured) { Alert.alert("Sign in required", "Please sign in and connect Supabase first."); return; }
     if (!legalName.trim() || !phone.trim() || !make.trim() || !model.trim() || !registration.trim()) { Alert.alert("Missing details", "Please complete your name, phone and vehicle details."); return; }
@@ -106,6 +130,12 @@ export default function DriverApplication() {
     <Text style={s.title}>Driver application</Text>
     <Text style={s.muted}>Complete your details to apply to drive with Lotty Go.</Text>
     <View style={s.statusCard}><Text style={s.label}>APPLICATION STATUS</Text><Text style={s.status}>{status.replace("_", " ").toUpperCase()}</Text><Text style={s.muted}>{status === "approved" ? "Your driver profile is approved." : status === "pending" ? "Your application is waiting for review." : "Submit your details and required documents for review."}</Text></View>
+    <View style={{ alignItems: "center", gap: spacing.sm }}>
+      {photoUrl ? <Image source={{ uri: photoUrl }} style={{ width: 88, height: 88, borderRadius: 44 }} /> : <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center" }}><Icon name="account" size={42} color={colors.brandPrimary} /></View>}
+      <Pressable onPress={uploadProfilePhoto} disabled={photoUploading} style={s.uploadButton}>
+        {photoUploading ? <ActivityIndicator size="small" color={colors.brandPrimary} /> : <Text style={s.uploadText}>{photoUrl ? "Change profile photo" : "Add profile photo"}</Text>}
+      </Pressable>
+    </View>
     <Text style={s.section}>PERSONAL DETAILS</Text>
     <Field label="Full legal name" value={legalName} onChangeText={setLegalName} placeholder="As shown on your ID" />
     <Field label="Mobile number" value={phone} onChangeText={setPhone} placeholder="e.g. 082 123 4567" keyboardType="phone-pad" />

@@ -15,6 +15,7 @@ export type DriverProfile = {
   women_service_approved: boolean;
   payout_status: "not_connected" | "pending" | "verified" | "rejected";
   review_notes: string | null;
+  profile_photo_url?: string | null;
 };
 
 export async function getDriverProfile(userId: string) {

@@ -9,6 +9,8 @@ import { MapView, Marker } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
 import { getDriverProfile, type DriverProfile } from "@/src/lib/driver";
 import { acceptRide, listOpenRides, type Ride } from "@/src/lib/rides";
+import { getActiveRide } from "@/src/lib/activeRide";
+import ActiveRideScreen from "@/src/components/ActiveRideScreen";
 import { colors, radius, spacing } from "@/src/theme";
 
 export default function DriverHome() {
@@ -16,11 +18,13 @@ export default function DriverHome() {
  const [online,setOnline]=useState(false);const [coords,setCoords]=useState({latitude:-26.2041,longitude:28.0473});
  const {data:profile,isLoading:profileLoading,refetch:refreshProfile}=useQuery({queryKey:["driver-profile",session?.user.id],queryFn:()=>getDriverProfile(session!.user.id),enabled:configured&&!!session});
  const approved=profile?.application_status==="approved";
+ const {data:activeRide}=useQuery({queryKey:["active-ride",session?.user.id,"driver"],queryFn:()=>getActiveRide(session!.user.id,"driver"),enabled:configured&&!!session,refetchInterval:4000});
  useEffect(()=>{(async()=>{const {status}=await Location.requestForegroundPermissionsAsync();if(status==="granted"){const l=await Location.getCurrentPositionAsync({});setCoords({latitude:l.coords.latitude,longitude:l.coords.longitude});}})();},[]);
  const {data:open}=useQuery({queryKey:["open-rides",session?.user.id],queryFn:()=>listOpenRides(session!.user.id),enabled:configured&&online&&approved,refetchInterval:online&&approved?5000:false});
  const next:Ride|undefined=open?.[0];
  const accept=async()=>{if(!session||!next)return;try{await acceptRide(next.id,session.user.id);qc.invalidateQueries({queryKey:["open-rides"]});Alert.alert("Accepted","Head to pickup.");}catch(e:any){Alert.alert("Could not accept",e?.message??"Please try again.");}};
  const toggleOnline=()=>{if(!approved){Alert.alert("Approval required","Your driver application must be approved before you can go online.");router.push("/driver-application");return;}setOnline(true);};
+ if(activeRide)return <ActiveRideScreen ride={activeRide} role="driver"/>;
  return <View style={{flex:1}}>
   <MapView style={StyleSheet.absoluteFill} region={{...coords,latitudeDelta:0.05,longitudeDelta:0.05}} showsUserLocation><Marker coordinate={coords}/></MapView>
   <View style={[s.pill,{top:insets.top+spacing.md}]}><Icon name="cash" size={16} color="#fff"/><Text style={{color:"#fff",fontWeight:"700",fontSize:13}}>Today: R0</Text></View>

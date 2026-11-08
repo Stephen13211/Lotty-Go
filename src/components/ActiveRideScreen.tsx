@@ -1,0 +1,63 @@
+import Icon from "@react-native-vector-icons/material-design-icons";
+import * as Location from "expo-location";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MapView, Marker, Polyline } from "@/src/components/map";
+import { useAuth } from "@/src/lib/auth";
+import { supabase } from "@/src/lib/supabase";
+import { completeTrip, getMatchedDriverProfile, getWaitingQuote, listRideMessages, markDriverArrived, sendRideMessage, startTrip, updateDriverLocation, type WaitingQuote } from "@/src/lib/activeRide";
+import type { Ride } from "@/src/lib/rides";
+import { colors, radius, spacing } from "@/src/theme";
+
+type Point={latitude:number;longitude:number};
+export default function ActiveRideScreen({ride,role}:{ride:Ride;role:"rider"|"driver"}) {
+ const {session}=useAuth(); const qc=useQueryClient();
+ const driver=role==="driver"; const [coords,setCoords]=useState<Point|null>(null);
+ const [route,setRoute]=useState<Point[]>([]); const [message,setMessage]=useState(""); const [busy,setBusy]=useState(false);
+ const [quote,setQuote]=useState<WaitingQuote|null>(null); const [seconds,setSeconds]=useState(0);
+ const {data:profile}=useQuery({queryKey:["matched-driver",ride.driver_id],queryFn:()=>getMatchedDriverProfile(ride.id),enabled:!driver&&!!ride.driver_id,refetchInterval:15000});
+ const {data:messages=[]}=useQuery({queryKey:["ride-messages",ride.id],queryFn:()=>listRideMessages(ride.id),refetchInterval:4000});
+ const destination:Point=ride.status==="accepted"?{latitude:ride.pickup_lat,longitude:ride.pickup_lng}:{latitude:ride.dropoff_lat,longitude:ride.dropoff_lng};
+ const center=coords??(driver?{latitude:ride.pickup_lat,longitude:ride.pickup_lng}:ride.driver_latitude&&ride.driver_longitude?{latitude:ride.driver_latitude,longitude:ride.driver_longitude}:destination);
+ useEffect(()=>{const channel=supabase.channel("ride-"+ride.id).on("postgres_changes",{event:"*",schema:"public",table:"rides",filter:"id=eq."+ride.id},()=>{qc.invalidateQueries({queryKey:["active-ride"]});qc.invalidateQueries({queryKey:["my-rides"]});}).on("postgres_changes",{event:"INSERT",schema:"public",table:"ride_messages",filter:"ride_id=eq."+ride.id},()=>qc.invalidateQueries({queryKey:["ride-messages",ride.id]})).subscribe();return()=>{supabase.removeChannel(channel);};},[ride.id,qc]);
+ useEffect(()=>{if(!driver||ride.status==="completed"||ride.status==="cancelled")return;let subscription:Location.LocationSubscription|undefined;(async()=>{const p=await Location.requestForegroundPermissionsAsync();if(p.status!=="granted")return;subscription=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:5000,distanceInterval:10},loc=>{const point={latitude:loc.coords.latitude,longitude:loc.coords.longitude};setCoords(point);updateDriverLocation(ride.id,point.latitude,point.longitude).catch(()=>{});});})();return()=>{subscription?.remove();};},[driver,ride.id,ride.status]);
+ useEffect(()=>{if(!ride.driver_arrived_at||ride.status!=="accepted")return;const update=()=>setSeconds(Math.max(0,Math.floor((Date.now()-new Date(ride.driver_arrived_at!).getTime())/1000)));update();const id=setInterval(update,1000);return()=>clearInterval(id);},[ride.driver_arrived_at,ride.status]);
+ useEffect(()=>{if(!ride.driver_arrived_at||ride.status!=="accepted")return;let alive=true;const load=async()=>{try{const q=await getWaitingQuote(ride.id);if(alive){setQuote(q);if(q?.charging_started){} }}catch{}};load();const id=setInterval(load,5000);return()=>{alive=false;clearInterval(id);};},[ride.id,ride.driver_arrived_at,ride.status]);
+ useEffect(()=>{if(!driver&&ride.driver_latitude&&ride.driver_longitude)setCoords({latitude:ride.driver_latitude,longitude:ride.driver_longitude});},[driver,ride.driver_latitude,ride.driver_longitude]);
+ useEffect(()=>{let alive=true;const from=coords??(driver?{latitude:ride.pickup_lat,longitude:ride.pickup_lng}:ride.driver_latitude&&ride.driver_longitude?{latitude:ride.driver_latitude,longitude:ride.driver_longitude}:destination);const url=`https://router.project-osrm.org/route/v1/driving/${from.longitude},${from.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson`;fetch(url).then(r=>r.json()).then(j=>{const line=j?.routes?.[0]?.geometry?.coordinates;if(alive&&Array.isArray(line))setRoute(line.map(([longitude,latitude]:number[])=>({latitude,longitude})));}).catch(()=>setRoute([from,destination]));return()=>{alive=false;};},[ride.id,ride.status,coords?.latitude,coords?.longitude]);
+ const send=async()=>{if(!session||!message.trim())return;try{await sendRideMessage(ride.id,session.user.id,message);setMessage("");qc.invalidateQueries({queryKey:["ride-messages",ride.id]});}catch(e:any){Alert.alert("Message not sent",e.message??"Please try again.");}};
+ const action=async(fn:()=>Promise<any>,label:string)=>{setBusy(true);try{await fn();qc.invalidateQueries({queryKey:["active-ride"]});qc.invalidateQueries({queryKey:["my-rides"]});}catch(e:any){Alert.alert(label,e?.message??"Please try again.");}finally{setBusy(false);}};
+ const arrived=()=>action(()=>markDriverArrived(ride.id),"Could not mark arrival");
+ const start=()=>action(async()=>{const result=await startTrip(ride.id);Alert.alert("Trip started",result?.final_waiting_fee>0?`Waiting fee added: R${Number(result.final_waiting_fee).toFixed(2)}`:"Your trip has started.");},"Could not start trip");
+ const complete=()=>Alert.alert("Complete this trip?","Confirm that the passenger has reached the destination.",[{text:"Not yet",style:"cancel"},{text:"Complete trip",onPress:()=>action(()=>completeTrip(ride.id),"Could not complete trip")}]);
+ const fmt=(n:number)=>`${Math.floor(n/60).toString().padStart(2,"0")}:${(n%60).toString().padStart(2,"0")}`;
+ const mapCenter=coords??destination;
+ const driverName=profile?.legal_name||"Your driver";
+ const statusText=ride.status==="accepted"?(ride.driver_arrived_at?"Driver has arrived":"Driver is on the way"): "You're on your way";
+ return <View style={s.root}>
+  <MapView style={StyleSheet.absoluteFill} region={{...mapCenter,latitudeDelta:0.035,longitudeDelta:0.035}} showsUserLocation={driver}>
+   <Marker coordinate={destination} pinColor={ride.status==="accepted"?"#E5A000":colors.brandPrimary}/>
+   {coords&&<Marker coordinate={coords}/>}
+   {route.length>1&&<Polyline coordinates={route} strokeColor={colors.brandPrimary} strokeWidth={5}/>}
+  </MapView>
+  <ScrollView style={s.sheet} contentContainerStyle={{padding:spacing.lg,gap:spacing.md}}>
+   <Text style={s.title}>{driver?"Active ride":statusText}</Text>
+   <Text style={s.muted}>{ride.status==="accepted"?"Pickup: "+ride.pickup_address:"Destination: "+ride.dropoff_address}</Text>
+   {!driver&&ride.driver_id?<View style={s.profile}>
+    {profile?.profile_photo_url?<Image source={{uri:profile.profile_photo_url}} style={s.photo}/>:<View style={s.photoFallback}><Icon name="account" size={30} color={colors.onBrandPrimary}/></View>}
+    <View style={{flex:1,gap:3}}><Text style={s.name}>{driverName}</Text><Text style={s.muted}>{[profile?.vehicle_make,profile?.vehicle_model,profile?.vehicle_year].filter(Boolean).join(" ")||"Vehicle details pending"}</Text><Text style={s.plate}>{profile?.vehicle_registration||"Registration pending"}</Text></View>
+   </View>:null}
+   <View style={s.info}><Text style={s.infoLabel}>FARE</Text><Text style={s.fare}>R{Number(ride.fare).toFixed(2)}</Text><Text style={s.muted}>{ride.status.replace("_"," ").toUpperCase()}</Text></View>
+   {driver&&ride.status==="accepted"&&!ride.driver_arrived_at?<Pressable disabled={busy} onPress={arrived} style={s.primary}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>I've arrived at pickup</Text>}</Pressable>:null}
+   {driver&&ride.status==="accepted"&&ride.driver_arrived_at?<View style={s.wait}><Text style={s.waitTitle}>Passenger waiting time</Text><Text style={s.timer}>{fmt(seconds)}</Text><Text style={s.muted}>{seconds<(quote?.free_minutes??2)*60?`${Math.ceil(((quote?.free_minutes??2)*60-seconds)/60)} free minute(s) remaining`:`Waiting fee active · R${Number(quote?.waiting_fee??0).toFixed(2)} so far`}</Text><Pressable disabled={busy} onPress={start} style={s.primary}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>Start trip</Text>}</Pressable></View>:null}
+   {driver&&ride.status==="in_progress"?<Pressable disabled={busy} onPress={complete} style={s.primary}>{busy?<ActivityIndicator color="#fff"/>:<Text style={s.primaryText}>Complete trip</Text>}</Pressable>:null}
+   {!driver&&ride.status==="accepted"&&ride.driver_arrived_at?<View style={s.notice}><Text style={s.noticeText}>{quote?.charging_started?"Waiting charges have started.":`Your first ${quote?.free_minutes??2} minutes after arrival are free.`}</Text>{quote?.charging_started?<Text style={s.noticeText}>Current waiting fee: R{Number(quote.waiting_fee).toFixed(2)}</Text>:null}</View>:null}
+   <Text style={s.section}>IN-APP CHAT</Text>
+   <View style={s.chat}>{messages.map(m=><View key={m.id} style={[s.bubble,m.sender_id===session?.user.id?s.mine:s.theirs]}><Text style={s.bubbleText}>{m.body}</Text></View>)}</View>
+   <View style={s.composer}><TextInput value={message} onChangeText={setMessage} placeholder="Write a message…" placeholderTextColor={colors.muted} style={s.input}/><Pressable onPress={send} style={s.send}><Icon name="send" size={20} color="#fff"/></Pressable></View>
+   <Text style={s.muted}>Chat and live location are available only to the rider and assigned driver during this active trip.</Text>
+  </ScrollView>
+ </View>;
+}
+const s=StyleSheet.create({root:{flex:1,backgroundColor:colors.surface},sheet:{position:"absolute",left:0,right:0,bottom:0,maxHeight:"57%",backgroundColor:colors.surface,borderTopLeftRadius:radius.lg,borderTopRightRadius:radius.lg,elevation:12},title:{fontSize:22,fontWeight:"900",color:colors.onSurface},muted:{fontSize:12,color:colors.muted,lineHeight:18},profile:{flexDirection:"row",alignItems:"center",gap:spacing.md,padding:spacing.md,backgroundColor:colors.surfaceSecondary,borderRadius:radius.lg},photo:{width:62,height:62,borderRadius:31},photoFallback:{width:62,height:62,borderRadius:31,backgroundColor:colors.brandPrimary,alignItems:"center",justifyContent:"center"},name:{fontSize:17,fontWeight:"900",color:colors.onSurface},plate:{fontSize:13,fontWeight:"900",color:colors.onSurface},info:{flexDirection:"row",alignItems:"center",gap:spacing.md},infoLabel:{fontSize:10,fontWeight:"900",color:colors.muted},fare:{fontSize:20,fontWeight:"900",color:colors.brandPrimary},primary:{minHeight:52,borderRadius:radius.pill,backgroundColor:colors.brandPrimary,alignItems:"center",justifyContent:"center"},primaryText:{fontWeight:"900",fontSize:15,color:"#fff"},wait:{padding:spacing.md,borderRadius:radius.md,backgroundColor:colors.surfaceSecondary,gap:spacing.sm},waitTitle:{fontWeight:"900",color:colors.onSurface},timer:{fontSize:28,fontWeight:"900",color:colors.brandPrimary},notice:{padding:spacing.md,backgroundColor:colors.brandTertiary,borderRadius:radius.md,gap:4},noticeText:{color:colors.onBrandTertiary,fontWeight:"700"},section:{fontSize:11,fontWeight:"900",letterSpacing:1,color:colors.muted},chat:{gap:spacing.sm},bubble:{maxWidth:"85%",padding:spacing.md,borderRadius:radius.md},mine:{alignSelf:"flex-end",backgroundColor:colors.brandPrimary},theirs:{alignSelf:"flex-start",backgroundColor:colors.surfaceSecondary},bubbleText:{color:colors.onSurface},composer:{flexDirection:"row",gap:spacing.sm},input:{flex:1,minHeight:46,borderWidth:1,borderColor:colors.border,borderRadius:radius.pill,paddingHorizontal:spacing.md,color:colors.onSurface},send:{width:46,height:46,borderRadius:23,backgroundColor:colors.brandPrimary,alignItems:"center",justifyContent:"center"}});
