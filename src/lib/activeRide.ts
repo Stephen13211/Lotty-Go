@@ -61,3 +61,9 @@ export async function revokeTripShareLinks(rideId:string) {
   const {error}=await supabase.rpc("revoke_trip_share_links",{p_ride_id:rideId});
   if(error)throw error;
 }
+
+export async function cancelRide(rideId:string,reason:string) {
+  const {data,error}=await supabase.rpc("cancel_ride_request",{p_ride_id:rideId,p_reason:reason});
+  if(error)throw error;
+  return (data?.[0] ?? null) as {cancelled_status:string;cancellation_fee:number;driver_distance_km:number|null} | null;
+}
