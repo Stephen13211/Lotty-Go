@@ -114,12 +114,6 @@ export default function RiderHome() {
   const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 2000 });
   const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 2000 });
   const { data: dispatchState } = useQuery({ queryKey: ["ride-dispatch", requestedRide?.id], queryFn: () => advanceRideDispatch(requestedRide!.id), enabled: !!requestedRide, refetchInterval: requestedRide ? 1500 : false });
-  const { data: nearbyDrivers = [] } = useQuery({
-    queryKey: ["nearby-drivers", pickup?.coords.latitude, pickup?.coords.longitude, selectedRide],
-    queryFn: () => getNearbyOnlineDrivers(pickup!.coords, selectedRide),
-    enabled: !!session && !!pickup,
-    refetchInterval: 10000,
-  });
   const [pickupText, setPickupText] = useState("");
   const [pickup, setPickup] = useState<Place | null>(null);
   const [destinationText, setDestinationText] = useState("");
@@ -132,6 +126,12 @@ export default function RiderHome() {
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
   const [roadRouteDistanceKm, setRoadRouteDistanceKm] = useState<number | null>(null);
+  const { data: nearbyDrivers = [] } = useQuery({
+    queryKey: ["nearby-drivers", pickup?.coords.latitude, pickup?.coords.longitude, selectedRide],
+    queryFn: () => getNearbyOnlineDrivers(pickup!.coords, selectedRide),
+    enabled: !!session && !!pickup,
+    refetchInterval: 10000,
+  });
 
   const useCurrentLocation = async () => {
     setLocationBusy(true);
