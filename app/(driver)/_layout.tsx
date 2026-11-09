@@ -9,6 +9,7 @@ export default function DriverLayout() {
       <Tabs.Screen name="earnings" options={{ title: "Earnings", tabBarIcon: ({color,size}) => <Icon name="cash-multiple" color={color} size={size} /> }} />
       <Tabs.Screen name="trips"    options={{ title: "Trips",    tabBarIcon: ({color,size}) => <Icon name="history" color={color} size={size} /> }} />
       <Tabs.Screen name="profile"  options={{ title: "Profile",  tabBarIcon: ({color,size}) => <Icon name="account-circle-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="payouts" options={{ href: null }} />
     </Tabs>
   );
 }
