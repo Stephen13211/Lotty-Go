@@ -14,6 +14,8 @@ export type DriverProfile = {
   women_riders_only: boolean;
   women_service_approved: boolean;
   payout_status: "not_connected" | "pending" | "verified" | "rejected";
+  payout_provider?: string | null;
+  payout_recipient_id?: string | null;
   review_notes: string | null;
   profile_photo_url?: string | null;
 };
