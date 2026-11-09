@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
     const { data: existing, error: existingError } = await admin.from("payments").select("collection_status,gateway_reference").eq("ride_id", ride.id).maybeSingle();
     if (existingError) throw existingError;
     if (existing?.collection_status === "paid") return reply({ already_paid: true, message: "This ride is already paid." });
-    const reference = `lottygo_${ride.id.replaceAll("-", "")}_${crypto.randomUUID().replaceAll("-", "")}`;
+    const reference = `lottygo-${ride.id.replaceAll("-", "")}-${crypto.randomUUID().replaceAll("-", "")}`;
     const fare = Number(ride.fare);
     if (!Number.isFinite(fare) || fare <= 0) return reply({ error: "Invalid ride fare." }, 400);
     const driverShare = Math.round(fare * 75) / 100;
@@ -61,8 +61,8 @@ Deno.serve(async (req: Request) => {
         currency: "ZAR",
         reference,
         subaccount: driver.payout_recipient_id,
-        callback_url: `lottygo://payment-result?ride_id=${encodeURIComponent(ride.id)}&reference=${encodeURIComponent(reference)}`,
-        metadata: { ride_id: ride.id, rider_id: ride.rider_id, driver_id: ride.driver_id, platform_share_percent: 25 },
+        callback_url: "https://oqcmwtfjgphumnhnjrpz.supabase.co/functions/v1/paystack-callback",
+        metadata: JSON.stringify({ ride_id: ride.id, rider_id: ride.rider_id, driver_id: ride.driver_id, platform_share_percent: 25 }),
       }),
     });
     const payload = await initResponse.json().catch(() => ({}));
