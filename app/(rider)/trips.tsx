@@ -1,18 +1,19 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { useQuery } from "@tanstack/react-query";
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
 import { listMyRides, type Ride } from "@/src/lib/rides";
 import { colors, radius, spacing } from "@/src/theme";
 import RateTrip from "@/src/components/RateTrip";
+import { initiateCardPayment } from "@/src/lib/payments";
 
 const STATUS: Record<string,string> = { requested: colors.warning, accepted: "#1976D2", in_progress: colors.brandPrimary, completed: colors.success, cancelled: colors.error };
 
 export default function Trips() {
   const insets = useSafeAreaInsets();
   const { configured, session } = useAuth();
-  const { data, isLoading, refetch, isFetching } = useQuery({ queryKey: ["my-rides"], queryFn: listMyRides, enabled: configured });
+  const { data, isLoading, refetch, isFetching } = useQuery({ queryKey: ["my-rides"], queryFn: listMyRides, enabled: configured, refetchInterval: 5000 });
 
   const render = ({ item }: { item: Ride }) => (
     <View style={s.card}>
@@ -24,6 +25,14 @@ export default function Trips() {
         <Text style={{ color: colors.muted, fontSize: 13 }}>R{item.fare} · {item.distance_km} km</Text>
         <View style={[s.pill, { backgroundColor: STATUS[item.status] ?? colors.muted }]}><Text style={{ color: "#fff", fontSize: 11, fontWeight: "700", textTransform: "capitalize" }}>{item.status.replace("_"," ")}</Text></View>
       </View>
+      {item.status === "completed" && item.payment_method === "card" && item.payment_status !== "paid" ? <Pressable style={s.payButton} onPress={async () => {
+        try {
+          const result = await initiateCardPayment(item.id);
+          if ("already_paid" in result) { await refetch(); return; }
+          await Linking.openURL(result.authorization_url);
+        } catch (e: any) { Alert.alert("Payment could not start", e?.message ?? "Please try again."); }
+      }}><Text style={s.payButtonText}>Pay securely with Paystack · R{Number(item.fare).toFixed(2)}</Text></Pressable> : null}
+      {item.status === "completed" && item.payment_method === "card" && item.payment_status === "paid" ? <Text style={s.paid}>Card payment confirmed</Text> : null}
       {item.status === "completed" && session?.user.id ? <RateTrip rideId={item.id} /> : null}
     </View>
   );
@@ -48,5 +57,8 @@ const s = StyleSheet.create({
   card: { padding: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
   pill: { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
   empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.md },
+  payButton: { minHeight: 46, marginTop: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md },
+  payButtonText: { color: "#fff", fontSize: 12, fontWeight: "900" },
+  paid: { color: colors.success, fontSize: 12, fontWeight: "900", marginTop: spacing.md },
   emptyText: { color: colors.muted, fontSize: 14 },
 });
