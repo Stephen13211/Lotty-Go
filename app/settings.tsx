@@ -31,7 +31,7 @@ export default function Settings() {
     {driver ? <View style={s.group}>
       <Text style={s.heading}>DRIVER</Text>
       <Item icon="file-document-outline" title="Driver application" detail="Documents, vehicle and approval status" onPress={() => router.push("/driver-application")} />
-      <Item icon="bank-outline" title="Bank payout setup" detail="Secure payout-provider verification required" onPress={() => router.push("/driver-application")} />
+      <Item icon="bank-outline" title="Bank payout setup" detail="Secure payout-provider verification required" onPress={() => router.push("/bank-payout")} />
       <Item icon="account-heart-outline" title="Lotty Women preference" detail="Choose whether to accept women riders only" onPress={() => router.push("/driver-application")} />
     </View> : <View style={s.group}>
       <Text style={s.heading}>RIDING</Text>
