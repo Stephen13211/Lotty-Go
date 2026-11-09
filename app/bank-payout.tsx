@@ -19,6 +19,7 @@ export default function BankPayoutSetup() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string>("not_connected");
+  const [recipientId, setRecipientId] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function BankPayoutSetup() {
           setBanks(bankResult.data?.banks ?? []);
           setApproved(profile?.application_status === "approved");
           setStatus(profile?.payout_status ?? "not_connected");
+          setRecipientId(profile?.payout_recipient_id ?? null);
         }
       } catch (e: any) {
         if (alive) Alert.alert("Could not load banks", e?.message ?? "Please try again.");
@@ -50,15 +52,18 @@ export default function BankPayoutSetup() {
     }
     Alert.alert(
       "Before you continue",
-      "This sends the bank details to Paystack to create a driver subaccount. Only continue when Lotty Go has confirmed that your account is approved for South African test subaccounts and you are using test details.",
+      recipientId
+        ? "This creates a replacement Paystack subaccount. Card rides will be paused until Lotty Go verifies the new bank account. Your previous account will no longer be used for new card rides after the replacement is saved."
+        : "This sends the bank details to Paystack to create a driver subaccount. Only continue when Lotty Go has confirmed that your account is approved for South African test subaccounts and you are using test details.",
       [{ text: "Not now", style: "cancel" }, { text: "Continue", onPress: async () => {
         setSaving(true);
         try {
           const { data, error } = await supabase.functions.invoke("paystack-driver-payout", {
-            body: { action: "create_subaccount", bank_code: selected.code, account_number: accountNumber.replace(/\s/g, ""), account_type: accountType },
+            body: { action: recipientId ? "replace_subaccount" : "create_subaccount", bank_code: selected.code, account_number: accountNumber.replace(/\s/g, ""), account_type: accountType },
           });
           if (error) throw error;
           setStatus(data?.payout_status ?? "pending");
+          if (data?.payout_recipient_id) setRecipientId(data.payout_recipient_id);
           Alert.alert("Request submitted", data?.message ?? "Paystack returned a payout setup response.");
         } catch (e: any) {
           Alert.alert("Payout setup failed", e?.message ?? "Please try again.");
@@ -69,7 +74,7 @@ export default function BankPayoutSetup() {
 
   return <ScrollView style={{ flex: 1, backgroundColor: colors.surface }} contentContainerStyle={{ padding: spacing.xl, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}>
     <Text style={s.title}>Bank payout setup</Text>
-    <Text style={s.muted}>Link the bank account where your driver earnings should be settled.</Text>
+    <Text style={s.muted}>Link the bank account where your driver earnings should be settled. You can request a replacement later; card rides pause until the replacement is verified.</Text>
     <View style={s.status}>
       <Icon name="shield-check-outline" size={22} color={colors.brandPrimary}/>
       <View style={{ flex: 1 }}>
@@ -95,9 +100,10 @@ export default function BankPayoutSetup() {
     <Text style={s.label}>ACCOUNT NUMBER</Text>
     <TextInput value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" placeholder="Enter account number" placeholderTextColor={colors.muted} style={s.input} secureTextEntry/>
     <Text style={s.muted}>Your full account number is sent securely to the Paystack Edge Function and is not stored in the Lotty Go app.</Text>
-    <Pressable disabled={!approved || saving || loading || !selected || !accountNumber} onPress={submit} style={[s.button, (!approved || saving || !selected || !accountNumber) && { opacity: 0.45 }]}>
-      {saving ? <ActivityIndicator color="#fff"/> : <Text style={s.buttonText}>Connect bank account</Text>}
+    <Pressable disabled={!approved || saving || loading || !selected || !accountNumber || (status === "pending" && !!recipientId)} onPress={submit} style={[s.button, (!approved || saving || loading || !selected || !accountNumber || (status === "pending" && !!recipientId)) && { opacity: 0.45 }]}>
+      {saving ? <ActivityIndicator color="#fff"/> : <Text style={s.buttonText}>{recipientId ? "Change bank account" : "Connect bank account"}</Text>}
     </Pressable>
+    {status === "pending" && recipientId ? <Text style={s.disclaimer}>Your bank account is awaiting admin verification. You cannot submit another change until this review is complete.</Text> : null}
     <Text style={s.disclaimer}>Do not enter real bank details until Paystack confirms that your South African Starter Business account can create ZAR driver subaccounts in test mode. A pending status is not proof that payouts are active.</Text>
   </ScrollView>;
 }
