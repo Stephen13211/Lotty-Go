@@ -35,7 +35,7 @@ export async function listMyRides(){
  if(error)throw error;return(data??[])as Ride[];
 }
 export async function listOpenRides(driverId:string){
- const {data:profile,error:profileError}=await supabase.from("driver_profiles").select("application_status,vehicle_type,women_riders_only,women_service_approved").eq("user_id",driverId).maybeSingle();
+ const {data:profile,error:profileError}=await supabase.from("driver_profiles").select("application_status,vehicle_type,women_riders_only,women_service_approved,payout_provider,payout_recipient_id,payout_status").eq("user_id",driverId).maybeSingle();
  if(profileError)throw profileError;
  if(!profile||profile.application_status!=="approved")return[];
  const {data:availability,error:availabilityError}=await supabase.from("driver_availability")
@@ -50,6 +50,7 @@ export async function listOpenRides(driverId:string){
   if(profile.vehicle_type==="car"&&ride.ride_type==="courier_motorcycle")return false;
   if(ride.ride_type==="lotty_xl"&&!profile.women_service_approved)return false;
   if(profile.women_riders_only&&ride.ride_type!=="lotty_xl")return false;
+  if(ride.payment_method==="card"&&(profile.payout_provider!=="paystack"||!profile.payout_recipient_id||profile.payout_status!=="verified"))return false;
   return haversineKm({latitude:availability.latitude!,longitude:availability.longitude!},
    {latitude:ride.pickup_lat,longitude:ride.pickup_lng})<=20;
  });
