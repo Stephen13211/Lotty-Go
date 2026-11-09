@@ -61,6 +61,7 @@ Deno.serve(async (req: Request) => {
         currency: "ZAR",
         reference,
         subaccount: driver.payout_recipient_id,
+        bearer: "account",
         callback_url: "https://oqcmwtfjgphumnhnjrpz.supabase.co/functions/v1/paystack-callback",
         metadata: JSON.stringify({ ride_id: ride.id, rider_id: ride.rider_id, driver_id: ride.driver_id, platform_share_percent: 25 }),
       }),
