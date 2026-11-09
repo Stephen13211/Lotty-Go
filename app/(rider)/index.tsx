@@ -9,7 +9,7 @@ import ActiveRideScreen from "@/src/components/ActiveRideScreen";
 import RideMatchingScreen from "@/src/components/RideMatchingScreen";
 import { MapView, Marker, Polyline } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
-import { createRide, estimateFare, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
+import { advanceRideDispatch, createRide, estimateFare, getNearbyOnlineDrivers, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
 import { getActiveRide, getRequestedRide } from "@/src/lib/activeRide";
 import { colors, radius, spacing } from "@/src/theme";
 
@@ -111,8 +111,15 @@ export default function RiderHome() {
   const sheetRef = useRef<BottomSheet>(null);
   const snaps = useMemo(() => ["62%", "90%"], []);
   const { session, configured } = useAuth();
-  const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 4000 });
-  const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 4000 });
+  const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 2000 });
+  const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 2000 });
+  const { data: dispatchState } = useQuery({ queryKey: ["ride-dispatch", requestedRide?.id], queryFn: () => advanceRideDispatch(requestedRide!.id), enabled: !!requestedRide, refetchInterval: requestedRide ? 1500 : false });
+  const { data: nearbyDrivers = [] } = useQuery({
+    queryKey: ["nearby-drivers", pickup?.coords.latitude, pickup?.coords.longitude, selectedRide],
+    queryFn: () => getNearbyOnlineDrivers(pickup!.coords, selectedRide),
+    enabled: !!session && !!pickup,
+    refetchInterval: 10000,
+  });
   const [pickupText, setPickupText] = useState("");
   const [pickup, setPickup] = useState<Place | null>(null);
   const [destinationText, setDestinationText] = useState("");
@@ -235,7 +242,7 @@ export default function RiderHome() {
     }
     setBusy(true);
     try {
-      await createRide({
+      const created = await createRide({
         rider_id: session.user.id,
         pickup_address: pickup.label,
         pickup_lat: pickup.coords.latitude,
@@ -250,7 +257,8 @@ export default function RiderHome() {
         fare: estimateFare(km, selectedOption.multiplier),
         distance_km: Number(km.toFixed(2)),
       });
-      Alert.alert("Ride requested", "Your ride request has been saved. Driver matching depends on available drivers.");
+      await advanceRideDispatch(created.id);
+      Alert.alert("Ride requested", "Lotty Go is now offering your request to nearby eligible drivers.");
     } catch (error: any) {
       Alert.alert("Request failed", error?.message ?? "Please try again.");
     } finally { setBusy(false); }
@@ -259,7 +267,7 @@ export default function RiderHome() {
   const mapCenter = pickup?.coords ?? FALLBACK;
   const mapLine = roadRouteCoordinates.length > 1 ? roadRouteCoordinates : routePoints.map(point => point.coords);
   if (activeRide) return <ActiveRideScreen ride={activeRide} role="rider" />;
-  if (requestedRide) return <RideMatchingScreen ride={requestedRide} />;
+  if (requestedRide) return <RideMatchingScreen ride={requestedRide} dispatchStatus={dispatchState?.dispatch_status} />;
 
   return (
     <View style={{ flex: 1 }}>
@@ -270,6 +278,9 @@ export default function RiderHome() {
           latitudeDelta: destination && pickup ? Math.max(0.035, (Math.max(...mapLine.map(p => p.latitude)) - Math.min(...mapLine.map(p => p.latitude))) * 1.8) : 0.06,
           longitudeDelta: destination && pickup ? Math.max(0.035, (Math.max(...mapLine.map(p => p.longitude)) - Math.min(...mapLine.map(p => p.longitude))) * 1.8) : 0.06,
         }} showsUserLocation>
+        {nearbyDrivers.map((driver, index) => <Marker key={`nearby-driver-${index}`} coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}>
+          <View style={s.nearbyCar}><Icon name={driver.vehicle_type === "motorcycle" ? "motorbike" : "car-side"} size={19} color="#FFFFFF" /></View>
+        </Marker>)}
         {pickup && <Marker coordinate={pickup.coords} />}
         {stops.map((stop, i) => stop.coords && <Marker key={stop.id} coordinate={stop.coords} pinColor="#E5A000" />)}
         {destination && <Marker coordinate={destination.coords} pinColor={colors.brandSecondary} />}
@@ -367,6 +378,7 @@ export default function RiderHome() {
 }
 
 const s = StyleSheet.create({
+  nearbyCar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   menu: { position: "absolute", left: spacing.lg, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   title: { fontSize: 28, fontWeight: "800", color: colors.onSurface },
   locationBox: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: spacing.sm },
