@@ -67,7 +67,11 @@ Deno.serve(async (req: Request) => {
     if (paymentError) throw paymentError;
     if (!payment || payment.payment_method !== "card") return reply({ error: "Payment reference not found." }, 404);
     if (tx.currency !== "ZAR" || Number(tx.amount) !== Math.round(Number(payment.total_fare) * 100)) return reply({ error: "Verified transaction amount or currency does not match the ride." }, 400);
-    if (String(tx.metadata?.ride_id ?? "") !== payment.ride_id) return reply({ error: "Ride metadata mismatch." }, 400);
+    let metadata: any = tx.metadata ?? {};
+    if (typeof metadata === "string") {
+      try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+    }
+    if (String(metadata?.ride_id ?? "") !== payment.ride_id) return reply({ error: "Ride metadata mismatch." }, 400);
     if (payment.collection_status === "paid") {
       const { error: ensureRidePaidError } = await admin.from("rides").update({ payment_status: "paid" }).eq("id", payment.ride_id);
       if (ensureRidePaidError) throw ensureRidePaidError;
