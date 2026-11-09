@@ -59,6 +59,10 @@ export async function acceptRide(rideId:string){
 export async function declineRideOffer(rideId:string){
  const {error}=await supabase.rpc("decline_ride_offer",{p_ride_id:rideId});if(error)throw error;
 }
+export async function listMyRides(){
+ const {data,error}=await supabase.from("rides").select("*").order("created_at",{ascending:false});
+ if(error)throw error;return (data??[]) as Ride[];
+}
 export async function listOpenRides(driverId:string){
  const {data:profile,error:profileError}=await supabase.from("driver_profiles").select("application_status,vehicle_type,women_riders_only,women_service_approved,payout_provider,payout_recipient_id,payout_status").eq("user_id",driverId).maybeSingle();
  if(profileError)throw profileError;
