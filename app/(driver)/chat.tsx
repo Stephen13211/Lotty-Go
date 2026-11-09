@@ -54,7 +54,7 @@ export default function DriverChatScreen() {
         <Icon name="information-outline" size={18} color={colors.brandPrimary} />
         <Text style={s.noticeText}>Messages in this room are visible to all approved Lotty Go drivers. Keep conversations respectful and never post passwords, banking details or a rider's private information.</Text>
       </View>
-      <ScrollView style={s.messages} contentContainerStyle={s.messageList}>
+      {profile && !approved ? <View style={s.messages}><Text style={s.empty}>Driver community chat unlocks once your driver application is approved.</Text></View> : <ScrollView style={s.messages} contentContainerStyle={s.messageList}>
         {isLoading ? <ActivityIndicator color={colors.brandPrimary} /> : null}
         {error ? <Text style={s.empty}>Could not load messages. Check your connection and try again.</Text> : null}
         {!isLoading && !error && messages.length === 0 ? <Text style={s.empty}>No messages yet. Start the conversation with your fellow drivers.</Text> : null}
@@ -68,7 +68,7 @@ export default function DriverChatScreen() {
             </View>
           );
         })}
-      </ScrollView>
+      </ScrollView>}
       <View style={[s.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <TextInput
           value={draft}
@@ -80,7 +80,7 @@ export default function DriverChatScreen() {
           maxLength={1000}
           editable={!sending && approved}
         />
-        <Pressable disabled={!draft.trim() || sending || !approved} onPress={send} style={[s.send, (!draft.trim() || sending) && { opacity: 0.45 }]}>
+        <Pressable disabled={!draft.trim() || sending || !approved} onPress={send} style={[s.send, (!draft.trim() || sending || !approved) && { opacity: 0.45 }]}>
           {sending ? <ActivityIndicator color="#fff" /> : <Icon name="send" size={21} color="#fff" />}
         </Pressable>
       </View>
