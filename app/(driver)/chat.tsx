@@ -14,7 +14,7 @@ export default function DriverChatScreen() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["driver-profile", session?.user.id],
     queryFn: () => getDriverProfile(session!.user.id),
     enabled: !!session,
@@ -54,7 +54,7 @@ export default function DriverChatScreen() {
         <Icon name="information-outline" size={18} color={colors.brandPrimary} />
         <Text style={s.noticeText}>Messages in this room are visible to all approved Lotty Go drivers. Keep conversations respectful and never post passwords, banking details or a rider's private information.</Text>
       </View>
-      {profile && !approved ? <View style={s.messages}><Text style={s.empty}>Driver community chat unlocks once your driver application is approved.</Text></View> : <ScrollView style={s.messages} contentContainerStyle={s.messageList}>
+      {!profileLoading && !approved ? <View style={s.messages}><Text style={s.empty}>Driver community chat unlocks once your driver application is approved.</Text></View> : <ScrollView style={s.messages} contentContainerStyle={s.messageList}>
         {isLoading ? <ActivityIndicator color={colors.brandPrimary} /> : null}
         {error ? <Text style={s.empty}>Could not load messages. Check your connection and try again.</Text> : null}
         {!isLoading && !error && messages.length === 0 ? <Text style={s.empty}>No messages yet. Start the conversation with your fellow drivers.</Text> : null}
