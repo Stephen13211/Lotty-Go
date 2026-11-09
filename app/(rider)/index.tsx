@@ -345,12 +345,16 @@ export default function RiderHome() {
           {selectedRide === "courier_motorcycle" ? <View style={{ gap: spacing.xs }}><Text style={s.section}>DELIVERY INSTRUCTIONS</Text><TextInput value={courierNotes} onChangeText={setCourierNotes} placeholder="Describe the parcel and any pickup or drop-off instructions" placeholderTextColor={colors.muted} multiline style={s.courierInput} /></View> : null}
           <Text style={s.section}>CHOOSE PAYMENT METHOD</Text>
           <View style={s.paymentRow}>
-            <View style={[s.paymentOption, s.paymentActive]}>
+            <Pressable onPress={() => setPayment("cash")} style={[s.paymentOption, payment === "cash" && s.paymentActive]}>
               <Icon name="cash" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Cash</Text>
-              <Icon name="check-circle" size={18} color={colors.brandPrimary} />
-            </View>
+              {payment === "cash" ? <Icon name="check-circle" size={18} color={colors.brandPrimary} /> : null}
+            </Pressable>
+            <Pressable onPress={() => setPayment("card")} style={[s.paymentOption, payment === "card" && s.paymentActive]}>
+              <Icon name="credit-card-outline" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Card</Text>
+              {payment === "card" ? <Icon name="check-circle" size={18} color={colors.brandPrimary} /> : null}
+            </Pressable>
           </View>
-          <Text style={s.paymentNote}>Cash is currently the only enabled payment method. Card payments will appear once secure collection and driver payouts are connected.</Text>
+          <Text style={s.paymentNote}>{payment === "card" ? "Card payment is collected securely after the trip, once the final fare and any waiting fee are known. Only drivers with verified Paystack bank accounts can accept card rides." : "Cash rides are paid directly to the driver. Lotty Go does not take a commission from cash fares."}</Text>
           <Pressable onPress={confirmRide} disabled={busy || selectedOption.available === false}
             style={[s.cta, (busy || selectedOption.available === false) && { opacity: 0.55 }]}>
             {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaText}>Confirm Ride{routePoints.length > 1 ? ` · R${estimateFare(km, selectedOption.multiplier)}` : ""}</Text>}
