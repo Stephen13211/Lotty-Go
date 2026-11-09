@@ -15,6 +15,7 @@ export default function DriverProfile(){
   </View>
   <View style={s.group}>
    <Pressable style={s.row} onPress={()=>router.push("/driver-application")}><Icon name="file-document-outline" size={22} color={colors.brandPrimary}/><View style={{flex:1}}><Text style={s.rowTitle}>Driver application</Text><Text style={s.sub}>Documents, vehicle and approval status</Text></View><Icon name="chevron-right" size={20} color={colors.muted}/></Pressable>
+   <Pressable style={s.row} onPress={()=>router.push("/(driver)/payouts")}><Icon name="bank-outline" size={22} color={colors.brandPrimary}/><View style={{flex:1}}><Text style={s.rowTitle}>Payout details</Text><Text style={s.sub}>Link your bank account for driver earnings</Text></View><Icon name="chevron-right" size={20} color={colors.muted}/></Pressable>
    <Pressable style={s.row} onPress={()=>router.push("/settings")}><Icon name="cog-outline" size={22} color={colors.brandPrimary}/><View style={{flex:1}}><Text style={s.rowTitle}>Settings</Text><Text style={s.sub}>Preferences and account settings</Text></View><Icon name="chevron-right" size={20} color={colors.muted}/></Pressable>
   </View>
   <Pressable onPress={async()=>{await setRole("rider");router.replace("/(rider)");}} style={s.sw}><Icon name="map-marker-radius" size={18} color={colors.onBrandPrimary}/><Text style={{color:colors.onBrandPrimary,fontWeight:"700"}}>Switch to Rider</Text></Pressable>
