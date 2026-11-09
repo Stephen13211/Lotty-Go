@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         email: authData.user.email,
-        amount: Math.round(fare * 100),
+        amount: String(Math.round(fare * 100)),
         currency: "ZAR",
         reference,
         subaccount: driver.payout_recipient_id,
