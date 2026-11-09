@@ -1,7 +1,7 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +16,6 @@ import { colors, radius, spacing } from "@/src/theme";
 export default function DriverHome() {
  const insets=useSafeAreaInsets();const router=useRouter();const {session,configured}=useAuth();const qc=useQueryClient();
  const [online,setOnline]=useState(false);const [coords,setCoords]=useState({latitude:-26.2041,longitude:28.0473});const [now,setNow]=useState(Date.now());
- const hadActiveRide=useRef(false);
  const {data:profile,isLoading:profileLoading}=useQuery({queryKey:["driver-profile",session?.user.id],queryFn:()=>getDriverProfile(session!.user.id),enabled:configured&&!!session});
  const approved=profile?.application_status==="approved";
  const {data:activeRide}=useQuery({queryKey:["active-ride",session?.user.id,"driver"],queryFn:()=>getActiveRide(session!.user.id,"driver"),enabled:configured&&!!session,refetchInterval:2000});
@@ -24,11 +23,11 @@ export default function DriverHome() {
  const next=offer?.ride;
  const secondsLeft=offer?Math.max(0,Math.ceil((new Date(offer.expires_at).getTime()-now)/1000)):0;
 
- useEffect(()=>{if(activeRide){hadActiveRide.current=true;}else if(hadActiveRide.current){hadActiveRide.current=false;setOnline(false);qc.invalidateQueries({queryKey:["driver-ride-offer"]});}},[activeRide?.id,qc]);
+ useEffect(()=>{if(activeRide)qc.invalidateQueries({queryKey:["driver-ride-offer"]});},[activeRide?.id,qc]);
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),250);return()=>clearInterval(id);},[]);
 
  useEffect(()=>{
-  if(!online||!session)return;
+  if(!online||!session||activeRide)return;
   let alive=true;let subscription:Location.LocationSubscription|undefined;
   const publish=async()=>{
    try{
@@ -51,11 +50,11 @@ export default function DriverHome() {
    }catch(e){if(alive)Alert.alert("Location unavailable","Lotty Go needs location access to keep you visible to nearby riders.");}
   })();
   return()=>{alive=false;clearInterval(heartbeat);subscription?.remove();};
- },[online,session?.user.id]);
+ },[online,session?.user.id,activeRide?.id]);
 
  const accept=async()=>{
   if(!session||!next)return;
-  try{await acceptRide(next.id);setOnline(false);qc.invalidateQueries({queryKey:["driver-ride-offer"]});qc.invalidateQueries({queryKey:["active-ride"]});Alert.alert("Ride accepted","Head to the pickup location.");}
+  try{await acceptRide(next.id);qc.invalidateQueries({queryKey:["driver-ride-offer"]});qc.invalidateQueries({queryKey:["active-ride"]});Alert.alert("Ride accepted","Your pickup route is now shown on the map. Follow the live route to the passenger.");}
   catch(e:any){qc.invalidateQueries({queryKey:["driver-ride-offer"]});Alert.alert("Offer unavailable",e?.message??"This offer may have expired. Waiting for the next request.");}
  };
  const decline=async()=>{
