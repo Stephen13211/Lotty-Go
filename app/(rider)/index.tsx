@@ -267,7 +267,7 @@ export default function RiderHome() {
   const mapCenter = pickup?.coords ?? FALLBACK;
   const mapLine = roadRouteCoordinates.length > 1 ? roadRouteCoordinates : routePoints.map(point => point.coords);
   if (activeRide) return <ActiveRideScreen ride={activeRide} role="rider" />;
-  if (requestedRide) return <RideMatchingScreen ride={requestedRide} dispatchStatus={dispatchState?.dispatch_status} />;
+  if (requestedRide) return <RideMatchingScreen ride={requestedRide} dispatchStatus={dispatchState?.dispatch_status} nearbyDrivers={nearbyDrivers} />;
 
   return (
     <View style={{ flex: 1 }}>
