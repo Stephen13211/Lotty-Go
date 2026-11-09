@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
     if (rideError) throw rideError;
     if (!ride || ride.rider_id !== authData.user.id) return reply({ error: "Ride not found for this rider." }, 404);
     if (ride.payment_method !== "card") return reply({ error: "This ride is not set to card payment." }, 400);
-    if (ride.status !== "accepted" || !ride.driver_id) return reply({ error: "A driver must accept the ride before card payment can start." }, 409);
+    if (ride.status !== "completed" || !ride.driver_id) return reply({ error: "Card payment becomes available after the driver completes the trip, so the final fare includes any waiting fee." }, 409);
     if (ride.payment_status === "paid") return reply({ already_paid: true, message: "This ride is already paid." });
     const { data: driver, error: driverError } = await admin.from("driver_profiles").select("application_status,payout_provider,payout_recipient_id,payout_status").eq("user_id", ride.driver_id).maybeSingle();
     if (driverError) throw driverError;
