@@ -22,14 +22,15 @@ $$;
 
 revoke all on function private.is_approved_lotty_driver() from public, anon;
 grant execute on function private.is_approved_lotty_driver() to authenticated;
-drop function if exists public.is_approved_lotty_driver();
 
 drop policy if exists "Approved drivers can read driver chat" on public.driver_chat_messages;
+drop policy if exists "Approved drivers can send driver chat" on public.driver_chat_messages;
+drop function if exists public.is_approved_lotty_driver();
+
 create policy "Approved drivers can read driver chat"
   on public.driver_chat_messages for select to authenticated
   using ((select private.is_approved_lotty_driver()));
 
-drop policy if exists "Approved drivers can send driver chat" on public.driver_chat_messages;
 create policy "Approved drivers can send driver chat"
   on public.driver_chat_messages for insert to authenticated
   with check (
