@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
 import { listDriverChatMessages, sendDriverChatMessage } from "@/src/lib/driverChat";
+import { getDriverProfile } from "@/src/lib/driver";
 import { colors, radius, spacing } from "@/src/theme";
 
 export default function DriverChatScreen() {
@@ -13,10 +14,16 @@ export default function DriverChatScreen() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const { data: profile } = useQuery({
+    queryKey: ["driver-profile", session?.user.id],
+    queryFn: () => getDriverProfile(session!.user.id),
+    enabled: !!session,
+  });
+  const approved = profile?.application_status === "approved";
   const { data: messages = [], isLoading, error } = useQuery({
     queryKey: ["driver-community-chat"],
     queryFn: listDriverChatMessages,
-    enabled: !!session,
+    enabled: !!session && approved,
     refetchInterval: 4000,
   });
 
@@ -71,9 +78,9 @@ export default function DriverChatScreen() {
           style={s.input}
           multiline
           maxLength={1000}
-          editable={!sending}
+          editable={!sending && approved}
         />
-        <Pressable disabled={!draft.trim() || sending} onPress={send} style={[s.send, (!draft.trim() || sending) && { opacity: 0.45 }]}>
+        <Pressable disabled={!draft.trim() || sending || !approved} onPress={send} style={[s.send, (!draft.trim() || sending) && { opacity: 0.45 }]}>
           {sending ? <ActivityIndicator color="#fff" /> : <Icon name="send" size={21} color="#fff" />}
         </Pressable>
       </View>
