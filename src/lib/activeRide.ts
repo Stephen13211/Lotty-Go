@@ -3,6 +3,20 @@ import type { Ride } from "./rides";
 
 export type RideMessage = { id: string; ride_id: string; sender_id: string; body: string; created_at: string };
 export type WaitingQuote = { free_minutes: number; fee_per_minute: number; billable_minutes: number; waiting_fee: number; charging_started: boolean };
+export type NextTripOffer = { ride_id:string; expires_at:string; pickup_address:string; dropoff_address:string; fare:number; distance_km:number; ride_type:string };
+export async function getMyNextTripOffer() {
+  const {data,error}=await supabase.rpc("get_my_next_trip_offer");
+  if(error)throw error;
+  return ((data?.[0] ?? null) as NextTripOffer|null);
+}
+export async function acceptNextTripOffer(rideId:string) {
+  const {error}=await supabase.rpc("accept_next_trip_offer",{p_ride_id:rideId});
+  if(error)throw error;
+}
+export async function declineNextTripOffer(rideId:string) {
+  const {error}=await supabase.rpc("decline_next_trip_offer",{p_ride_id:rideId});
+  if(error)throw error;
+}
 
 export async function getActiveRide(userId: string, role: "rider" | "driver") {
   const column = role === "rider" ? "rider_id" : "driver_id";
