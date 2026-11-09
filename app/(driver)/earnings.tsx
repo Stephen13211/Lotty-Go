@@ -13,7 +13,7 @@ export default function Earnings() {
   const { data } = useQuery({ queryKey: ["driver-rides", session?.user.id], queryFn: listMyRides, enabled: configured });
   const stats = useMemo(() => {
     const mine = (data ?? []).filter(r => r.driver_id === session?.user.id && r.status === "completed");
-    return { total: mine.reduce((s,r) => s + Number(r.fare) * 0.75, 0), trips: mine.length, km: mine.reduce((s,r) => s + Number(r.distance_km), 0) };
+    return { total: mine.reduce((s,r) => s + Number(r.fare) * (r.payment_method === "cash" ? 1 : 0.75), 0), trips: mine.length, km: mine.reduce((s,r) => s + Number(r.distance_km), 0) };
   }, [data, session?.user.id]);
 
   return (
@@ -23,7 +23,7 @@ export default function Earnings() {
         <Text style={{ color: colors.onBrandPrimary, opacity: 0.85, fontSize: 13, fontWeight: "600" }}>Estimated driver earnings</Text>
         <Text style={{ color: colors.onBrandPrimary, fontSize: 40, fontWeight: "900" }}>R{stats.total.toFixed(2)}</Text>
       </View>
-      <Text style={{ color: colors.muted, fontSize: 11 }}>Estimate only: 75% driver share on completed trips. For cash trips, the driver collects the full fare and owes Lotty Go the 25% commission; use trip history to record cash received. Automated bank payouts are not connected yet.</Text>
+      <Text style={{ color: colors.muted, fontSize: 11 }}>Estimated driver earnings: 100% of cash fares and 75% of card fares. Card payments and automatic bank settlements are not connected yet.</Text>
       <View style={{ flexDirection: "row", gap: spacing.md }}>
         <View style={s.card}><Icon name="car" size={22} color={colors.brandPrimary} /><Text style={s.v}>{stats.trips}</Text><Text style={s.l}>Trips</Text></View>
         <View style={s.card}><Icon name="map-marker-distance" size={22} color={colors.brandPrimary} /><Text style={s.v}>{stats.km.toFixed(1)} km</Text><Text style={s.l}>Distance</Text></View>
