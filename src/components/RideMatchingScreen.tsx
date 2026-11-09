@@ -7,7 +7,7 @@ import { cancelRide } from "@/src/lib/activeRide";
 import { colors, radius, spacing } from "@/src/theme";
 
 const reasons=["Changed my mind","Booked by mistake","Pickup location is wrong","Destination or trip details changed","Found another ride","Safety concern","Other"];
-export default function RideMatchingScreen({ride}:{ride:Ride}) {
+export default function RideMatchingScreen({ride,dispatchStatus}:{ride:Ride;dispatchStatus?:string}) {
  const qc=useQueryClient();const [showReasons,setShowReasons]=useState(false);const [busy,setBusy]=useState(false);
  const choose= (reason:string)=>Alert.alert("Cancel ride request?", "Your request has not been accepted by a driver yet. No close-pickup cancellation fee applies.",[
   {text:"Keep searching",style:"cancel"},
@@ -23,7 +23,7 @@ export default function RideMatchingScreen({ride}:{ride:Ride}) {
    <Text style={s.label}>DESTINATION</Text><Text style={s.address}>{ride.dropoff_address}</Text>
    <View style={s.row}><Text style={s.muted}>{ride.distance_km.toFixed(1)} km · {ride.ride_type.replace(/_/g," ")}</Text><Text style={s.fare}>R{Number(ride.fare).toFixed(2)}</Text></View>
   </View>
-  <View style={s.searching}><ActivityIndicator color={colors.brandPrimary}/><Text style={s.muted}>Searching for an available driver…</Text></View>
+  <View style={s.searching}>{dispatchStatus==="searching"?<Icon name="car-off" size={20} color={colors.brandPrimary}/>:<ActivityIndicator color={colors.brandPrimary}/>}<Text style={s.muted}>{dispatchStatus==="searching"?"No eligible driver is available right now. We'll keep checking nearby drivers.":"Offering your ride to nearby drivers. Each driver has 7 seconds to accept."}</Text></View>
   <Pressable disabled={busy} onPress={()=>setShowReasons(v=>!v)} style={s.cancel}>{busy?<ActivityIndicator color={colors.error}/>:<Text style={s.cancelText}>Cancel request</Text>}</Pressable>
   {showReasons?<View style={s.reasons}><Text style={s.label}>WHY ARE YOU CANCELLING?</Text>{reasons.map(r=><Pressable key={r} onPress={()=>choose(r)} style={s.reason}><Text style={s.address}>{r}</Text></Pressable>)}</View>:null}
  </View>;
