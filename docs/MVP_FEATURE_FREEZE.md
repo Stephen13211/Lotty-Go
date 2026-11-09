@@ -30,7 +30,8 @@ This document defines the first public-release scope. New ideas outside this lis
 - Correct pickup → stops → destination route order.
 - Driver identity, photo, vehicle make/model and registration.
 - Arrival, two-minute free waiting grace period, configurable waiting rate, trip start and completion.
-- In-app rider/driver chat.
+- In-app rider/driver chat during an active trip.
+- Shared driver community chat for approved drivers.
 - Pickup PIN before trip start.
 - Trip history and receipts.
 
@@ -97,7 +98,7 @@ Implemented in the app/database code:
 - Live location/route ETA, participant chat, trip sharing, pickup PIN, configurable waiting fee and cancellation reason/R10 fee recording.
 - Driver document review and admin approval; waiting-fee admin controls.
 - Trip history, one rating per trip participant, support reports, admin support queue and trusted emergency-contact storage.
-- Active-trip emergency button records an urgent report and opens the phone dialler for South African emergency number 112.
+- Active-trip emergency button records an urgent report and opens the phone dialler for South African Police Service emergency number 10111.
 
 Verified in the connected Supabase project:
 - Core trip, matching, waiting-fee, cancellation, trip-sharing and pickup-PIN tables/functions exist.
