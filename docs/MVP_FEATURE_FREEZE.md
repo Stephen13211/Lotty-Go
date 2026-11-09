@@ -31,7 +31,6 @@ This document defines the first public-release scope. New ideas outside this lis
 - Driver identity, photo, vehicle make/model and registration.
 - Arrival, two-minute free waiting grace period, configurable waiting rate, trip start and completion.
 - In-app rider/driver chat during an active trip.
-- Shared driver community chat for approved drivers.
 - Pickup PIN before trip start.
 - Trip history and receipts.
 
