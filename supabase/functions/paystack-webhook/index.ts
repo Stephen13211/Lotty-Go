@@ -20,9 +20,38 @@ Deno.serve(async (req: Request) => {
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!secret || !url || !service) return reply({ error: "Webhook is not configured." }, 503);
   const raw = await req.text();
-  const signature = req.headers.get("x-paystack-signature") ?? "";
-  const expected = await hmac(secret, raw);
-  if (!signature || !safeEqual(signature.toLowerCase(), expected)) return reply({ error: "Invalid webhook signature." }, 401);
+  const legacySignature = req.headers.get("x-paystack-signature") ?? "";
+  const modernHeader = req.headers.get("paystack-signature") ?? "";
+  let validSignature = false;
+
+  // New Paystack signing-secret format. Keep the legacy check active while Paystack
+  // continues sending x-paystack-signature for accounts that still have a secret key.
+  const webhookSecret = Deno.env.get("PAYSTACK_WEBHOOK_SECRET") ?? "";
+  if (modernHeader && webhookSecret) {
+    let timestamp = "";
+    const signatures: string[] = [];
+    for (const part of modernHeader.split(",")) {
+      const index = part.indexOf("=");
+      if (index < 0) continue;
+      const key = part.slice(0, index).trim();
+      const value = part.slice(index + 1).trim();
+      if (key === "t") timestamp = value;
+      if (key === "v1") {
+        const colon = value.indexOf(":");
+        if (colon >= 0) signatures.push(value.slice(colon + 1));
+      }
+    }
+    const seconds = Number(timestamp);
+    if (/^\d+$/.test(timestamp) && Math.abs(Date.now() / 1000 - seconds) <= 300) {
+      const modernExpected = await hmac(webhookSecret, timestamp + "." + raw);
+      validSignature = signatures.some(sig => safeEqual(sig.toLowerCase(), modernExpected));
+    }
+  }
+  if (!validSignature && legacySignature) {
+    const legacyExpected = await hmac(secret, raw);
+    validSignature = safeEqual(legacySignature.toLowerCase(), legacyExpected);
+  }
+  if (!validSignature) return reply({ error: "Invalid webhook signature." }, 401);
   let event: any;
   try { event = JSON.parse(raw); } catch { return reply({ error: "Invalid JSON." }, 400); }
   if (event.event !== "charge.success") return reply({ received: true, ignored: event.event ?? "unknown" });
@@ -39,7 +68,11 @@ Deno.serve(async (req: Request) => {
     if (!payment || payment.payment_method !== "card") return reply({ error: "Payment reference not found." }, 404);
     if (tx.currency !== "ZAR" || Number(tx.amount) !== Math.round(Number(payment.total_fare) * 100)) return reply({ error: "Verified transaction amount or currency does not match the ride." }, 400);
     if (String(tx.metadata?.ride_id ?? "") !== payment.ride_id) return reply({ error: "Ride metadata mismatch." }, 400);
-    if (payment.collection_status === "paid") return reply({ received: true, already_processed: true });
+    if (payment.collection_status === "paid") {
+      const { error: ensureRidePaidError } = await admin.from("rides").update({ payment_status: "paid" }).eq("id", payment.ride_id);
+      if (ensureRidePaidError) throw ensureRidePaidError;
+      return reply({ received: true, already_processed: true });
+    }
     const { error: updatePaymentError } = await admin.from("payments").update({
       collection_status: "paid", paid_at: new Date().toISOString(),
       driver_payout_status: "pending", lotty_settlement_status: "pending",
