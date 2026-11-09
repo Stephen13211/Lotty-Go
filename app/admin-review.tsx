@@ -13,6 +13,7 @@ type Application = {
   vehicle_year: number | null; vehicle_registration: string | null;
   application_status: string; women_riders_only: boolean; women_service_approved: boolean;
   created_at: string;
+  payout_provider?: string | null; payout_recipient_id?: string | null; payout_status?: string;
 };
 type DriverDocument = {
   id: string; driver_id: string; document_type: string; storage_path: string;
@@ -93,6 +94,30 @@ export default function AdminReview() {
     }
   };
 
+  const reviewPayout = async (row: Application, status: "verified" | "rejected") => {
+    if (!row.payout_provider || !row.payout_recipient_id) {
+      Alert.alert("No Paystack account", "This driver has not created a Paystack subaccount yet.");
+      return;
+    }
+    Alert.alert(status === "verified" ? "Verify payout account?" : "Reject payout account?", status === "verified"
+      ? "Only confirm after checking the Paystack subaccount and matching its bank-account name to the driver's verified identity."
+      : "This will block card payments for this driver until payout details are corrected.", [
+      { text: "Cancel", style: "cancel" },
+      { text: status === "verified" ? "Verify account" : "Reject account", style: status === "rejected" ? "destructive" : "default", onPress: async () => {
+        setBusy(row.user_id);
+        try {
+          const { error } = await supabase.from("driver_profiles").update({ payout_status: status, updated_at: new Date().toISOString() })
+            .eq("user_id", row.user_id).eq("payout_provider", "paystack").not("payout_recipient_id", "is", null);
+          if (error) throw error;
+          await refresh();
+          Alert.alert("Payout status updated", status === "verified" ? "This driver can now receive card-ride split payments." : "Card payments are blocked for this driver.");
+        } catch (e: any) {
+          Alert.alert("Could not update payout status", e?.message ?? "Admin permission is required.");
+        } finally { setBusy(null); }
+      }},
+    ]);
+  };
+
   const reviewApplication = async (row: Application, approved: boolean) => {
     const driverDocs = documents.filter(d => d.driver_id === row.user_id);
     const present = new Set(driverDocs.map(d => d.document_type));
@@ -168,6 +193,14 @@ export default function AdminReview() {
         </View>
         <Text style={s.sub}>{row.phone || "No phone"} · {row.vehicle_type || "Vehicle not selected"}</Text>
         <Text style={s.sub}>{[row.vehicle_year, row.vehicle_make, row.vehicle_model, row.vehicle_registration].filter(Boolean).join(" · ") || "Vehicle details incomplete"}</Text>
+        <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, gap: spacing.xs }}>
+          <Text style={s.docName}>CARD PAYOUT ACCOUNT: {(row.payout_status ?? "not_connected").toUpperCase()}</Text>
+          <Text style={s.sub}>{row.payout_provider === "paystack" && row.payout_recipient_id ? `Paystack subaccount: ${row.payout_recipient_id}` : "No Paystack subaccount linked"}</Text>
+          {row.payout_status === "pending" && row.payout_recipient_id ? <View style={s.actions}>
+            <Pressable disabled={!!busy} onPress={() => reviewPayout(row, "verified")} style={s.approve}><Text style={s.approveText}>Verify payout account</Text></Pressable>
+            <Pressable disabled={!!busy} onPress={() => reviewPayout(row, "rejected")} style={s.reject}><Text style={s.rejectText}>Reject payout</Text></Pressable>
+          </View> : null}
+        </View>
         <Text style={s.section}>DOCUMENT CHECKLIST</Text>
         {driverDocs.length === 0 ? <Text style={s.sub}>No documents uploaded yet.</Text> : driverDocs.map(doc => (
           <View key={doc.id} style={s.document}>
