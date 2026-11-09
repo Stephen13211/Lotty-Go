@@ -11,7 +11,7 @@ export default function PaymentResult() {
     <View style={s.icon}><Icon name="credit-card-check-outline" size={42} color={colors.brandPrimary}/></View>
     <Text style={s.title}>Returning to Lotty Go</Text>
     <Text style={s.body}>Paystack has returned you to the app. Your ride screen will show the payment status once our secure webhook confirms the transaction. Please don't pay again if the status is still updating.</Text>
-    <Pressable onPress={() => router.replace("/(rider)")} style={s.button}><Text style={s.buttonText}>Back to my ride</Text></Pressable>
+    <Pressable onPress={() => router.replace("/(rider)/trips")} style={s.button}><Text style={s.buttonText}>Back to my ride</Text></Pressable>
   </View>;
 }
 const s=StyleSheet.create({
