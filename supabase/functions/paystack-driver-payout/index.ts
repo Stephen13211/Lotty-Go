@@ -65,7 +65,8 @@ Deno.serve(async (request: Request) => {
       return json({ banks });
     }
 
-    if (action !== "create_subaccount") return json({ error: "Unsupported action." }, 400);
+    const replacing = action === "replace_subaccount";
+    if (action !== "create_subaccount" && !replacing) return json({ error: "Unsupported action." }, 400);
 
     const bankCode = String(input.bank_code ?? "").trim();
     const accountNumber = String(input.account_number ?? "").replace(/\s+/g, "");
@@ -84,24 +85,27 @@ Deno.serve(async (request: Request) => {
     if (profile.application_status !== "approved") {
       return json({ error: "Your driver application must be approved before payout setup." }, 403);
     }
-    if (profile.payout_provider === "paystack" && profile.payout_recipient_id) {
-      return json({ already_connected: true, payout_status: profile.payout_status, message: "A Paystack payout account is already linked." });
+    const oldRecipientId = profile.payout_recipient_id ?? null;
+    const oldStatus = profile.payout_status;
+    if (replacing && (profile.payout_provider !== "paystack" || !oldRecipientId)) {
+      return json({ error: "There is no existing Paystack bank account to replace." }, 409);
     }
-    if (profile.payout_status === "pending" && profile.payout_provider === "paystack") {
-      return json({ error: "Payout setup is already processing. Contact Lotty Go support if it remains pending." }, 409);
+    if (!replacing && oldRecipientId && profile.payout_provider === "paystack") {
+      return json({ already_connected: true, payout_status: oldStatus, message: "A Paystack payout account is already linked. Use Change bank account to replace it." });
+    }
+    if (oldStatus === "pending" && profile.payout_provider === "paystack") {
+      return json({ error: "Payout setup is already awaiting review. Complete that review before requesting another change." }, 409);
     }
 
-    const { data: locked, error: lockError } = await admin
-      .from("driver_profiles")
+    let lockQuery = admin.from("driver_profiles")
       .update({ payout_provider: "paystack", payout_status: "pending", updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .is("payout_recipient_id", null)
-      .neq("payout_status", "pending")
-      .select("user_id")
-      .maybeSingle();
+      .eq("user_id", user.id).eq("payout_status", oldStatus);
+    lockQuery = replacing ? lockQuery.eq("payout_recipient_id", oldRecipientId) : lockQuery.is("payout_recipient_id", null);
+    const { data: locked, error: lockError } = await lockQuery.select("user_id").maybeSingle();
     if (lockError) throw lockError;
-    if (!locked) return json({ error: "Payout setup is already processing or already linked. Refresh the page." }, 409);
+    if (!locked) return json({ error: "Payout setup changed or is already processing. Refresh the page." }, 409);
 
+    let paystackCreated = false;
     try {
       const email = user.email ?? "";
       const created = await paystack("/subaccount", "POST", {
@@ -117,6 +121,7 @@ Deno.serve(async (request: Request) => {
       });
       const subaccountCode = String(created.subaccount_code ?? "");
       if (!/^ACCT_/.test(subaccountCode)) throw new Error("Paystack did not return a valid subaccount code.");
+      paystackCreated = true;
 
       const { error: saveError } = await admin.from("driver_profiles").update({
         payout_provider: "paystack",
@@ -130,6 +135,7 @@ Deno.serve(async (request: Request) => {
       }
       return json({
         success: true,
+        payout_recipient_id: subaccountCode,
         payout_status: "pending",
         account_name: created.account_name ?? null,
         bank_name: created.settlement_bank ?? null,
@@ -137,12 +143,20 @@ Deno.serve(async (request: Request) => {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not create payout account.";
-      if (!message.includes("could not save its reference")) {
-        await admin.from("driver_profiles").update({
-          payout_provider: null,
-          payout_status: "not_connected",
-          updated_at: new Date().toISOString(),
-        }).eq("user_id", user.id).is("payout_recipient_id", null);
+      if (!paystackCreated) {
+        if (replacing && oldRecipientId) {
+          await admin.from("driver_profiles").update({
+            payout_provider: "paystack",
+            payout_status: oldStatus,
+            updated_at: new Date().toISOString(),
+          }).eq("user_id", user.id).eq("payout_recipient_id", oldRecipientId).eq("payout_status", "pending");
+        } else {
+          await admin.from("driver_profiles").update({
+            payout_provider: null,
+            payout_status: "not_connected",
+            updated_at: new Date().toISOString(),
+          }).eq("user_id", user.id).is("payout_recipient_id", null).eq("payout_status", "pending");
+        }
       }
       throw error;
     }
