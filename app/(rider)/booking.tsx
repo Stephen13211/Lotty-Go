@@ -12,7 +12,10 @@ export default function Booking() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, configured } = useAuth();
-  const { destination, pLat, pLng } = useLocalSearchParams<{ destination: string; pLat: string; pLng: string }>();
+  const { destination, pLat, pLng } = useLocalSearchParams<{ destination?: string; pLat?: string; pLng?: string }>();
+  const destinationAddress = typeof destination === "string" && destination.trim()
+    ? destination.trim()
+    : "Selected destination";
   const pickup = { latitude: parseFloat(pLat || "-26.2041"), longitude: parseFloat(pLng || "28.0473") };
   const dropoff = useMemo(() => ({ latitude: pickup.latitude + 0.04, longitude: pickup.longitude + 0.03 }), [pLat, pLng]);
   const km = useMemo(() => haversineKm(pickup, dropoff), [pLat, pLng]);
@@ -24,7 +27,7 @@ export default function Booking() {
     const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
     setBusy(true);
     try {
-      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destination, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
+      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, payment_method: "cash", fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
       Alert.alert("Ride requested", "Finding a driver near you.");
       router.replace("/(rider)/trips");
     } catch (e: any) { Alert.alert("Failed", e?.message ?? "Try again"); }
@@ -39,17 +42,14 @@ export default function Booking() {
         <Marker coordinate={dropoff} pinColor={colors.brandSecondary} />
         <Polyline coordinates={[pickup, dropoff]} strokeColor={colors.brandPrimary} strokeWidth={4} />
       </MapView>
-
       <Pressable onPress={() => router.back()} style={[s.back, { top: insets.top + spacing.md }]}>
         <Icon name="arrow-left" size={22} color={colors.onSurface} />
       </Pressable>
-
       <View style={[s.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={s.handle} />
         <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}>DROPOFF</Text>
-        <Text style={{ fontSize: 18, fontWeight: "700", color: colors.onSurface }} numberOfLines={1}>{destination}</Text>
+        <Text style={{ fontSize: 18, fontWeight: "700", color: colors.onSurface }} numberOfLines={1}>{destinationAddress}</Text>
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: spacing.md }}>~{km.toFixed(1)} km</Text>
-
         {RIDE_OPTIONS.map(o => {
           const active = o.type === sel;
           return (
@@ -63,7 +63,6 @@ export default function Booking() {
             </Pressable>
           );
         })}
-
         <Pressable onPress={confirm} disabled={busy} style={[s.cta, { opacity: busy ? 0.8 : 1 }]}>
           {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Confirm ride</Text>}
         </Pressable>
@@ -80,4 +79,3 @@ const s = StyleSheet.create({
   cta: { marginTop: spacing.md, height: 56, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   ctaT: { color: colors.onBrandPrimary, fontSize: 17, fontWeight: "700" },
 });
-

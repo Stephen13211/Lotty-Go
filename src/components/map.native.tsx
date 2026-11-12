@@ -57,12 +57,14 @@ export function Polyline({
       <Layer
         id="lotty-go-route-line"
         type="line"
+        layout={{
+          "line-cap": "round",
+          "line-join": "round",
+        }}
         paint={{
           "line-color": strokeColor,
           "line-width": strokeWidth,
           "line-opacity": 1,
-          "line-cap": "round",
-          "line-join": "round",
         }}
       />
     </GeoJSONSource>
@@ -80,8 +82,6 @@ export function MapView(props: any) {
     Math.min(18, Math.log2(360 / Math.max(latitudeDelta, longitudeDelta, 0.0001))),
   );
 
-  // Remount Camera when the selected route changes so the map recentres and
-  // fits the route bounds calculated by the rider screen.
   const cameraKey = [latitude, longitude, latitudeDelta, longitudeDelta]
     .map((value) => value.toFixed(5))
     .join(":");
@@ -90,7 +90,7 @@ export function MapView(props: any) {
     <View style={[styles.container, props.style]}>
       <Map
         mapStyle={MAP_STYLE}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         androidView="texture"
         logo={false}
         compass={false}
@@ -112,19 +112,24 @@ export function MapView(props: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: "hidden" },
   marker: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: "#D4AF37",
+    backgroundColor: "#0B0B0D",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 5,
+    elevation: 7,
+    shadowColor: "#D4AF37",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   markerCore: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#FFFFFF",
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#D4AF37",
   },
 });

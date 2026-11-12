@@ -4,9 +4,13 @@ import * as Location from "expo-location";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import ActiveRideScreen from "@/src/components/ActiveRideScreen";
+import RideMatchingScreen from "@/src/components/RideMatchingScreen";
 import { MapView, Marker, Polyline } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
-import { createRide, estimateFare, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
+import { advanceRideDispatch, createRide, estimateFare, getNearbyOnlineDrivers, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
+import { getActiveRide, getRequestedRide } from "@/src/lib/activeRide";
 import { colors, radius, spacing } from "@/src/theme";
 
 type Coords = { latitude: number; longitude: number };
@@ -107,6 +111,10 @@ export default function RiderHome() {
   const sheetRef = useRef<BottomSheet>(null);
   const snaps = useMemo(() => ["62%", "90%"], []);
   const { session, configured } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 2000 });
+  const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 2000 });
+  const { data: dispatchState } = useQuery({ queryKey: ["ride-dispatch", requestedRide?.id], queryFn: () => advanceRideDispatch(requestedRide!.id), enabled: !!requestedRide, refetchInterval: requestedRide ? 1500 : false });
   const [pickupText, setPickupText] = useState("");
   const [pickup, setPickup] = useState<Place | null>(null);
   const [destinationText, setDestinationText] = useState("");
@@ -114,10 +122,17 @@ export default function RiderHome() {
   const [stops, setStops] = useState<Stop[]>([]);
   const [selectedRide, setSelectedRide] = useState<RideType>("lotty_x");
   const [payment, setPayment] = useState<PaymentMethod>("cash");
+  const [courierNotes, setCourierNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
   const [roadRouteDistanceKm, setRoadRouteDistanceKm] = useState<number | null>(null);
+  const { data: nearbyDrivers = [] } = useQuery({
+    queryKey: ["nearby-drivers", pickup?.coords.latitude, pickup?.coords.longitude, selectedRide],
+    queryFn: () => getNearbyOnlineDrivers(pickup!.coords, selectedRide),
+    enabled: !!session && !!pickup,
+    refetchInterval: 10000,
+  });
 
   const useCurrentLocation = async () => {
     setLocationBusy(true);
@@ -228,7 +243,7 @@ export default function RiderHome() {
     }
     setBusy(true);
     try {
-      await createRide({
+      const created = await createRide({
         rider_id: session.user.id,
         pickup_address: pickup.label,
         pickup_lat: pickup.coords.latitude,
@@ -239,10 +254,26 @@ export default function RiderHome() {
         stops: stops.map(stop => ({ address: stop.label, latitude: stop.coords.latitude, longitude: stop.coords.longitude })),
         ride_type: selectedRide,
         payment_method: payment,
+        service_notes: selectedRide === "courier_motorcycle" ? courierNotes.trim() : null,
         fare: estimateFare(km, selectedOption.multiplier),
         distance_km: Number(km.toFixed(2)),
       });
-      Alert.alert("Ride requested", "Your ride request has been saved. Driver matching depends on available drivers.");
+
+      // Put the newly-created request into the matching screen immediately.
+      // This prevents a second tap creating a duplicate while polling catches up.
+      queryClient.setQueryData(["requested-ride", session.user.id], created);
+      queryClient.invalidateQueries({ queryKey: ["active-ride", session.user.id, "rider"] });
+
+      // Ride creation is already successful at this point. A temporary dispatch
+      // error must not tell the rider the request failed or invite a duplicate.
+      try {
+        await advanceRideDispatch(created.id);
+      } catch (dispatchError: any) {
+        console.warn("Initial ride dispatch failed; matching screen will retry:", dispatchError);
+        Alert.alert("Ride requested", "Your request has been saved. Lotty Go is still checking for an eligible nearby driver.");
+        return;
+      }
+      Alert.alert("Ride requested", "Lotty Go is now offering your request to nearby eligible drivers.");
     } catch (error: any) {
       Alert.alert("Request failed", error?.message ?? "Please try again.");
     } finally { setBusy(false); }
@@ -250,6 +281,9 @@ export default function RiderHome() {
 
   const mapCenter = pickup?.coords ?? FALLBACK;
   const mapLine = roadRouteCoordinates.length > 1 ? roadRouteCoordinates : routePoints.map(point => point.coords);
+  if (activeRide) return <ActiveRideScreen ride={activeRide} role="rider" />;
+  if (requestedRide) return <RideMatchingScreen ride={requestedRide} dispatchStatus={dispatchState?.dispatch_status} nearbyDrivers={nearbyDrivers} />;
+
   return (
     <View style={{ flex: 1 }}>
       <MapView style={StyleSheet.absoluteFill}
@@ -259,6 +293,9 @@ export default function RiderHome() {
           latitudeDelta: destination && pickup ? Math.max(0.035, (Math.max(...mapLine.map(p => p.latitude)) - Math.min(...mapLine.map(p => p.latitude))) * 1.8) : 0.06,
           longitudeDelta: destination && pickup ? Math.max(0.035, (Math.max(...mapLine.map(p => p.longitude)) - Math.min(...mapLine.map(p => p.longitude))) * 1.8) : 0.06,
         }} showsUserLocation>
+        {nearbyDrivers.map((driver, index) => <Marker key={`nearby-driver-${index}`} coordinate={{ latitude: driver.latitude, longitude: driver.longitude }}>
+          <View style={s.nearbyCar}><Icon name={driver.vehicle_type === "motorcycle" ? "motorbike" : "car-side"} size={19} color="#FFFFFF" /></View>
+        </Marker>)}
         {pickup && <Marker coordinate={pickup.coords} />}
         {stops.map((stop, i) => stop.coords && <Marker key={stop.id} coordinate={stop.coords} pinColor="#E5A000" />)}
         {destination && <Marker coordinate={destination.coords} pinColor={colors.brandSecondary} />}
@@ -288,13 +325,12 @@ export default function RiderHome() {
               {pickup ? <Text style={s.selectedText}>Pickup selected</Text> : null}
             </View>
             <View style={s.locationDivider} />
-            <PlaceInput label="DESTINATION" value={destinationText} placeholder="Where would you like to go?"
-              icon="map-marker-check" onChangeText={value => { setDestinationText(value); setDestination(null); }}
-              onSelect={selectDestination} rightAction={
-                <Pressable onPress={() => setStops(old => [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={s.plusButton}>
-                  <Icon name="plus" size={22} color={colors.onBrandPrimary} />
-                </Pressable>
-              } />
+            <View style={s.actionRow}>
+              <Text style={s.locationLabel}>ADD STOPS (OPTIONAL · UP TO 2)</Text>
+              <Pressable disabled={stops.length >= 2} onPress={() => setStops(old => old.length >= 2 ? old : [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={[s.plusButton, stops.length >= 2 && { opacity: 0.4 }]}>
+                <Icon name="plus" size={22} color={colors.onBrandPrimary} />
+              </Pressable>
+            </View>
             {stops.map((stop, index) => (
               <View key={stop.id} style={s.stopWrap}>
                 <PlaceInput label={`STOP ${index + 1}`} value={stop.label} placeholder="Add another stop"
@@ -306,6 +342,10 @@ export default function RiderHome() {
                   } />
               </View>
             ))}
+            <View style={s.locationDivider} />
+            <PlaceInput label="DESTINATION" value={destinationText} placeholder="Where would you like to go?"
+              icon="map-marker-check" onChangeText={value => { setDestinationText(value); setDestination(null); }}
+              onSelect={selectDestination} />
             {destination ? <Text style={s.selectedText}>Destination selected · Route updates on map</Text> : null}
           </View>
 
@@ -321,30 +361,31 @@ export default function RiderHome() {
               <View style={s.rideIcon}><Icon name={option.icon as any} size={27} color={colors.onSurface} /></View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.rideName}>{option.name}</Text>
-                <Text style={s.subText}>{option.seats} passengers{unavailable ? " · Coming soon" : " · Available"}</Text>
+                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{unavailable ? " · Coming soon" : " · Available"}</Text>
               </View>
               {unavailable ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier)}` : "—"}</Text>}
               {active && !unavailable && <Icon name="check-circle" size={21} color={colors.brandPrimary} />}
             </Pressable>;
           })}
 
+          {selectedRide === "courier_motorcycle" ? <View style={{ gap: spacing.xs }}><Text style={s.section}>DELIVERY INSTRUCTIONS</Text><TextInput value={courierNotes} onChangeText={setCourierNotes} placeholder="Describe the parcel and any pickup or drop-off instructions" placeholderTextColor={colors.muted} multiline style={s.courierInput} /></View> : null}
           <Text style={s.section}>CHOOSE PAYMENT METHOD</Text>
           <View style={s.paymentRow}>
             <Pressable onPress={() => setPayment("cash")} style={[s.paymentOption, payment === "cash" && s.paymentActive]}>
               <Icon name="cash" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Cash</Text>
-              {payment === "cash" && <Icon name="check-circle" size={18} color={colors.brandPrimary} />}
+              {payment === "cash" ? <Icon name="check-circle" size={18} color={colors.brandPrimary} /> : null}
             </Pressable>
             <Pressable onPress={() => setPayment("card")} style={[s.paymentOption, payment === "card" && s.paymentActive]}>
               <Icon name="credit-card-outline" size={22} color={colors.onSurface} /><Text style={s.paymentText}>Card</Text>
-              {payment === "card" && <Icon name="check-circle" size={18} color={colors.brandPrimary} />}
+              {payment === "card" ? <Icon name="check-circle" size={18} color={colors.brandPrimary} /> : null}
             </Pressable>
           </View>
-          <Text style={s.paymentNote}>Card selection is shown, but card charging is not connected yet.</Text>
-          <Pressable onPress={confirmRide} disabled={busy || selectedOption.available === false}
+          <Text style={s.paymentNote}>{payment === "card" ? "Card payment is collected securely after the trip, once the final fare and any waiting fee are known. Only drivers with verified Paystack bank accounts can accept card rides." : "Cash rides are paid directly to the driver. Lotty Go does not take a commission from cash fares."}</Text>
+          <Pressable onPress={confirmRide} disabled={busy || !!requestedRide || selectedOption.available === false}
             style={[s.cta, (busy || selectedOption.available === false) && { opacity: 0.55 }]}>
             {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaText}>Confirm Ride{routePoints.length > 1 ? ` · R${estimateFare(km, selectedOption.multiplier)}` : ""}</Text>}
           </Pressable>
-          <Text style={s.hint}>Choose a pickup and destination from the suggestions. Use the + beside destination to add stops.</Text>
+          <Text style={s.hint}>Choose a pickup and destination from the suggestions. Add up to two stops between pickup and destination.</Text>
         </BottomSheetScrollView>
       </BottomSheet>
     </View>
@@ -352,6 +393,7 @@ export default function RiderHome() {
 }
 
 const s = StyleSheet.create({
+  nearbyCar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   menu: { position: "absolute", left: spacing.lg, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   title: { fontSize: 28, fontWeight: "800", color: colors.onSurface },
   locationBox: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: spacing.sm },
@@ -379,6 +421,7 @@ const s = StyleSheet.create({
   rideName: { color: colors.onSurface, fontSize: 14, fontWeight: "800" },
   fare: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   comingSoon: { color: colors.muted, fontSize: 10, fontWeight: "800" },
+  courierInput: { minHeight: 72, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, padding: spacing.md, textAlignVertical: "top" },
   paymentRow: { flexDirection: "row", gap: spacing.sm },
   paymentOption: { flex: 1, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: spacing.sm },
   paymentActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },

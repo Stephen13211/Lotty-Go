@@ -1,4 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "./supabase";
 
@@ -33,13 +34,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setRole = async (r: Role) => {
     setRoleState(r);
     if (session?.user) await supabase.auth.updateUser({ data: { role: r } });
+    else await AsyncStorage.setItem("lotty-selected-role", r);
   };
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    const selectedRole = await AsyncStorage.getItem("lotty-selected-role");
+    if (selectedRole === "rider" || selectedRole === "driver") {
+      await supabase.auth.updateUser({ data: { role: selectedRole } });
+      await AsyncStorage.removeItem("lotty-selected-role");
+    }
   };
   const signUp = async (email: string, password: string, full_name: string, r: Role) => {
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, role: r } } });
+    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, role: r }, emailRedirectTo: "lottygo://auth/callback" } });
     if (error) throw error;
   };
   const signOut = async () => { await supabase.auth.signOut(); setRoleState(null); };
