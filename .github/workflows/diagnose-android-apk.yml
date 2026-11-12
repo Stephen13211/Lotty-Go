@@ -1,0 +1,43 @@
+name: Diagnose Lotty Go APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download the exact EAS APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          BUILD_ID: 212d8cf0-4ca0-4183-a6cd-a399081cae90
+        run: |
+          npx --yes eas-cli@latest build:view "$BUILD_ID" --json > build.json
+          node -e "const b=require('./build.json'); const u=b.artifacts?.applicationArchive?.url || b.artifacts?.buildUrl || b.artifacts?.applicationArchiveUrl; if(!u) { console.error(JSON.stringify(b,null,2)); process.exit(1); } require('fs').writeFileSync('apk-url.txt',u);"
+          APK_URL="$(cat apk-url.txt)"
+          curl --fail --location --retry 3 "$APK_URL" --output lotty-go.apk
+          test -s lotty-go.apk
+          file lotty-go.apk
+          ls -lh lotty-go.apk
+          sha256sum lotty-go.apk
+
+      - name: Install Android APK inspection tools
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
+          echo "$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_PATH"
+
+      - name: Inspect package, Android requirements, ABIs and signature
+        run: |
+          aapt dump badging lotty-go.apk | head -n 30
+          echo "---- Native Android libraries / ABIs ----"
+          unzip -l lotty-go.apk | grep -E 'lib/[^/]+/.*\.so$' | head -n 100 || true
+          echo "---- APK signature verification ----"
+          apksigner verify --verbose --print-certs lotty-go.apk
+          echo "---- APK structure ----"
+          unzip -t lotty-go.apk | tail -n 3
