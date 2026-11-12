@@ -4,7 +4,7 @@ import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
 
-const HERO_IMAGE = "https://images.unsplash.com/photo-1616591938203-9b5630a01006?auto=format&fit=crop&fm=jpg&q=88&w=1800";
+const HERO_IMAGE = "https://images.pexels.com/photos/3581833/pexels-photo-3581833.jpeg?auto=compress&cs=tinysrgb&w=1800";
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
