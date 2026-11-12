@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { colors } from "@/src/theme";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { StatusBar } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/lib/auth";
 
 const qc = new QueryClient();
@@ -11,7 +11,7 @@ const qc = new QueryClient();
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
+      <StatusBar style="light" />
       <SafeAreaProvider>
         <QueryClientProvider client={qc}>
           <AuthProvider>
