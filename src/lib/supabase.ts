@@ -10,6 +10,6 @@ export const isSupabaseConfigured = URL.length > 0 && KEY.length > 0;
 export const supabase = createClient(
   URL || "https://placeholder.supabase.co",
   KEY || "placeholder",
-  { auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false } },
+  { auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false, flowType: "pkce" } },
 );
 
