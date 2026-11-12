@@ -4,7 +4,7 @@ import * as Location from "expo-location";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ActiveRideScreen from "@/src/components/ActiveRideScreen";
 import RideMatchingScreen from "@/src/components/RideMatchingScreen";
 import { MapView, Marker, Polyline } from "@/src/components/map";
@@ -111,6 +111,7 @@ export default function RiderHome() {
   const sheetRef = useRef<BottomSheet>(null);
   const snaps = useMemo(() => ["62%", "90%"], []);
   const { session, configured } = useAuth();
+  const queryClient = useQueryClient();
   const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 2000 });
   const { data: requestedRide } = useQuery({ queryKey: ["requested-ride", session?.user.id], queryFn: () => getRequestedRide(session!.user.id), enabled: configured && !!session, refetchInterval: 2000 });
   const { data: dispatchState } = useQuery({ queryKey: ["ride-dispatch", requestedRide?.id], queryFn: () => advanceRideDispatch(requestedRide!.id), enabled: !!requestedRide, refetchInterval: requestedRide ? 1500 : false });
@@ -257,7 +258,21 @@ export default function RiderHome() {
         fare: estimateFare(km, selectedOption.multiplier),
         distance_km: Number(km.toFixed(2)),
       });
-      await advanceRideDispatch(created.id);
+
+      // Put the newly-created request into the matching screen immediately.
+      // This prevents a second tap creating a duplicate while polling catches up.
+      queryClient.setQueryData(["requested-ride", session.user.id], created);
+      queryClient.invalidateQueries({ queryKey: ["active-ride", session.user.id, "rider"] });
+
+      // Ride creation is already successful at this point. A temporary dispatch
+      // error must not tell the rider the request failed or invite a duplicate.
+      try {
+        await advanceRideDispatch(created.id);
+      } catch (dispatchError: any) {
+        console.warn("Initial ride dispatch failed; matching screen will retry:", dispatchError);
+        Alert.alert("Ride requested", "Your request has been saved. Lotty Go is still checking for an eligible nearby driver.");
+        return;
+      }
       Alert.alert("Ride requested", "Lotty Go is now offering your request to nearby eligible drivers.");
     } catch (error: any) {
       Alert.alert("Request failed", error?.message ?? "Please try again.");
@@ -366,7 +381,7 @@ export default function RiderHome() {
             </Pressable>
           </View>
           <Text style={s.paymentNote}>{payment === "card" ? "Card payment is collected securely after the trip, once the final fare and any waiting fee are known. Only drivers with verified Paystack bank accounts can accept card rides." : "Cash rides are paid directly to the driver. Lotty Go does not take a commission from cash fares."}</Text>
-          <Pressable onPress={confirmRide} disabled={busy || selectedOption.available === false}
+          <Pressable onPress={confirmRide} disabled={busy || !!requestedRide || selectedOption.available === false}
             style={[s.cta, (busy || selectedOption.available === false) && { opacity: 0.55 }]}>
             {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaText}>Confirm Ride{routePoints.length > 1 ? ` · R${estimateFare(km, selectedOption.multiplier)}` : ""}</Text>}
           </Pressable>
