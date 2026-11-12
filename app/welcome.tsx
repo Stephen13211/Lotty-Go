@@ -3,9 +3,18 @@ import { useRouter } from "expo-router";
 import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
-import { colors, radius, spacing } from "@/src/theme";
+import { radius, spacing } from "@/src/theme";
 
 const BG = "https://images.unsplash.com/photo-1599407384144-77deae48a47a?w=1200&q=85";
+
+// Keep the existing welcome screen appearance unchanged while the rest of the app
+// adopts the new gold-and-black theme.
+const WELCOME_COLORS = {
+  riderButton: "#156D4A",
+  riderText: "#FFFFFF",
+  driverButton: "#F2A900",
+  driverText: "#1A1A1A",
+};
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
@@ -21,11 +30,11 @@ export default function Welcome() {
         <Text style={s.tag}>Mzansi's ride, your way.</Text>
       </View>
       <View style={{ paddingBottom: insets.bottom + spacing.xl, paddingHorizontal: spacing.xl, gap: spacing.md }}>
-        <Pressable onPress={() => pick("rider")} style={[s.cta, { backgroundColor: colors.brandPrimary }]}>
-          <Text style={[s.ctaT, { color: colors.onBrandPrimary }]}>Ride with Lotty Go</Text>
+        <Pressable onPress={() => pick("rider")} style={[s.cta, { backgroundColor: WELCOME_COLORS.riderButton }]}>
+          <Text style={[s.ctaT, { color: WELCOME_COLORS.riderText }]}>Ride with Lotty Go</Text>
         </Pressable>
-        <Pressable onPress={() => pick("driver")} style={[s.cta, { backgroundColor: colors.brandSecondary }]}>
-          <Text style={[s.ctaT, { color: colors.onBrandSecondary }]}>Drive & Earn</Text>
+        <Pressable onPress={() => pick("driver")} style={[s.cta, { backgroundColor: WELCOME_COLORS.driverButton }]}>
+          <Text style={[s.ctaT, { color: WELCOME_COLORS.driverText }]}>Drive & Earn</Text>
         </Pressable>
       </View>
     </ImageBackground>
@@ -37,4 +46,3 @@ const s = StyleSheet.create({
   cta: { height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   ctaT: { fontSize: 17, fontWeight: "700" },
 });
-
