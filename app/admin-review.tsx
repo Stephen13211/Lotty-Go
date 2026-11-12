@@ -191,7 +191,7 @@ export default function AdminReview() {
           <Text style={s.name}>{row.legal_name || "Driver applicant"}</Text>
           <Text style={s.status}>{row.application_status.toUpperCase()}</Text>
         </View>
-        <Text style={s.sub}>{row.phone || "No phone"} · {row.vehicle_type || "Vehicle not selected"}</Text>
+        <Text style={s.sub}>{row.phone || "No phone"} · {row.vehicle_type === "motorcycle" ? "Motorcycle · Courier only" : row.vehicle_type === "car" ? "Car" : "Vehicle not selected"}</Text>
         <Text style={s.sub}>{[row.vehicle_year, row.vehicle_make, row.vehicle_model, row.vehicle_registration].filter(Boolean).join(" · ") || "Vehicle details incomplete"}</Text>
         <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, gap: spacing.xs }}>
           <Text style={s.docName}>CARD PAYOUT ACCOUNT: {(row.payout_status ?? "not_connected").toUpperCase()}</Text>
@@ -225,10 +225,10 @@ export default function AdminReview() {
             <Text style={s.rejectText}>Reject application</Text>
           </Pressable>
         </View> : <View style={{ gap: spacing.xs }}>
-          <Text style={s.sub}>Lotty Women eligibility is reviewed separately from general driver approval.</Text>
+          {row.vehicle_type === "motorcycle" ? <Text style={s.sub}>Courier-only motorcycle drivers are not eligible for Lotty Women.</Text> : <><Text style={s.sub}>Lotty Women eligibility is reviewed separately from general driver approval.</Text>
           <Pressable disabled={!!busy} onPress={() => setWomenService(row, !row.women_service_approved)} style={s.womenButton}>
             <Text style={s.womenButtonText}>{row.women_service_approved ? "Disable Lotty Women" : "Approve for Lotty Women"}</Text>
-          </Pressable>
+          </Pressable></>}
         </View>}
       </View>;
     })}
