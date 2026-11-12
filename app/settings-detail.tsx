@@ -1,3 +1,4 @@
+import Icon from "@react-native-vector-icons/material-design-icons";
 import { useLocalSearchParams } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
