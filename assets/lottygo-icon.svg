@@ -1,8 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="190" fill="#0B0B0D"/>
-  <rect x="38" y="38" width="948" height="948" rx="158" fill="none" stroke="#D4AF37" stroke-width="10"/>
-  <path d="M220 280h584" stroke="#8C6A15" stroke-width="5"/>
-  <text x="512" y="480" text-anchor="middle" fill="#F9E27D" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="900" letter-spacing="9">LOTTY</text>
-  <text x="512" y="625" text-anchor="middle" fill="#D4AF37" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="900" letter-spacing="18">GO</text>
-  <path d="M220 720h584" stroke="#8C6A15" stroke-width="5"/>
+  <rect width="1024" height="1024" fill="#0B0B0D"/>
+  <text x="512" y="550" text-anchor="middle" dominant-baseline="middle" fill="#D4AF37" font-family="Arial, Helvetica, sans-serif" font-size="116" font-weight="700" letter-spacing="1">LOTTY GO</text>
 </svg>

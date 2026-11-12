@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "lottygo",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "za.co.lottygo.app",
@@ -15,6 +16,10 @@
     },
     "android": {
       "package": "za.co.lottygo.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0B0B0D"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
