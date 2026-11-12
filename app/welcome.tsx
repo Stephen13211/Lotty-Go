@@ -7,8 +7,7 @@ import { radius, spacing } from "@/src/theme";
 
 const BG = "https://images.unsplash.com/photo-1599407384144-77deae48a47a?w=1200&q=85";
 
-// Keep the existing welcome screen appearance unchanged while the rest of the app
-// adopts the new gold-and-black theme.
+// Preserve the existing welcome screen's exact colours and visual layout.
 const WELCOME_COLORS = {
   riderButton: "#156D4A",
   riderText: "#FFFFFF",
@@ -19,8 +18,8 @@ const WELCOME_COLORS = {
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { setRole, session } = useAuth();
-  const pick = async (r: "rider"|"driver") => { await setRole(r); if (session) { router.replace(r === "driver" ? "/driver-application" : "/(rider)"); return; } router.push({ pathname: "/(auth)/login", params: { role: r }}); };
+  const { setRole } = useAuth();
+  const pick = async (r: "rider"|"driver") => { await setRole(r); router.push({ pathname: "/(auth)/login", params: { role: r }}); };
 
   return (
     <ImageBackground source={{ uri: BG }} style={{ flex: 1, justifyContent: "space-between" }}>
