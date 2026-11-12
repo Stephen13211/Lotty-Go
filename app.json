@@ -60,10 +60,6 @@
       }
     },
     "owner": "stephen132",
-    "backgroundColor": "#0B0B0D",
-    "splash": {
-      "backgroundColor": "#0B0B0D",
-      "resizeMode": "contain"
-    }
+    "backgroundColor": "#0B0B0D"
   }
 }
