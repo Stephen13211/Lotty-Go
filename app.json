@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "lottygo",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "za.co.lottygo.app",
@@ -54,6 +54,11 @@
         "projectId": "4279c799-a15a-4abb-9098-8961bf10113d"
       }
     },
-    "owner": "stephen132"
+    "owner": "stephen132",
+    "backgroundColor": "#0B0B0D",
+    "splash": {
+      "backgroundColor": "#0B0B0D",
+      "resizeMode": "contain"
+    }
   }
 }
