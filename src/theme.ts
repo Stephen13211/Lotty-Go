@@ -36,9 +36,9 @@ export const colors = {
 
 // Gold gradients for expo-linear-gradient
 export const gradients = {
-  gold: ["#F9E27D", "#D4AF37", "#8C6A15"],
-  goldButton: ["#F2D060", "#C9992B"],
-  platinum: ["#F4F4F6", "#C7CBD1"],
+  gold: ["#F9E27D", "#D4AF37", "#8C6A15"] as const,
+  goldButton: ["#F2D060", "#C9992B"] as const,
+  platinum: ["#F4F4F6", "#C7CBD1"] as const,
 };
 
 // Gold glow shadow for buttons & cards
