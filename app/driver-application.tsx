@@ -147,14 +147,15 @@ export default function DriverApplication() {
     <Field label="Mobile number" value={phone} onChangeText={setPhone} placeholder="e.g. 082 123 4567" keyboardType="phone-pad" />
     <Text style={s.section}>VEHICLE TYPE</Text>
     <View style={{ flexDirection: "row", gap: spacing.sm }}>
-      {(["car", "motorcycle"] as const).map(t => <Pressable key={t} onPress={() => setVehicleType(t)} style={[s.choice, vehicleType === t && s.choiceActive]}><Icon name={t === "car" ? "car" : "motorbike"} size={22} color={colors.onSurface} /><Text style={s.choiceText}>{t === "car" ? "Car" : "Motorcycle"}</Text></Pressable>)}
+      {(["car", "motorcycle"] as const).map(t => <Pressable key={t} onPress={() => setVehicleType(t)} style={[s.choice, vehicleType === t && s.choiceActive]}><Icon name={t === "car" ? "car" : "motorbike"} size={22} color={colors.onSurface} /><Text style={s.choiceText}>{t === "car" ? "Car" : "Motorcycle · Courier only"}</Text></Pressable>)}
     </View>
     <Text style={s.section}>VEHICLE DETAILS</Text>
     <Field label="Make" value={make} onChangeText={setMake} placeholder="Toyota" />
     <Field label="Model" value={model} onChangeText={setModel} placeholder="Corolla" />
     <Field label="Year" value={year} onChangeText={setYear} placeholder="2022" keyboardType="number-pad" />
     <Field label="Registration number" value={registration} onChangeText={setRegistration} placeholder="CA 123-456" />
-    {status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women access</Text><Text style={s.muted}>{status === "approved" ? "This service has a separate approval process. Your normal driver access is not affected." : "Lotty Women is reviewed separately from your standard driver application. Not being approved for it will not prevent normal driving once your standard application is approved."}</Text></View></View>}
+    {vehicleType !== "motorcycle" ? (status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women access</Text><Text style={s.muted}>{status === "approved" ? "This service has a separate approval process. Your normal driver access is not affected." : "Lotty Women is reviewed separately from your standard driver application. Not being approved for it will not prevent normal driving once your standard application is approved."}</Text></View></View>}
+    ) : null}
     <Text style={s.section}>DOCUMENTS AND VERIFICATION</Text>
     {DOCUMENTS.map(doc => <View key={doc.type} style={s.doc}>
       <Icon name="file-document-outline" size={20} color={colors.brandPrimary} />
