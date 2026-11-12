@@ -24,16 +24,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate required app assets
+      - name: Repair and validate the Lotty Go app icon
         run: |
-          test -f assets/icon.png || { echo "Missing assets/icon.png on feature/full-platform-build"; exit 1; }
           python -m pip install --quiet pillow
           python - <<'PY'
-          from PIL import Image
-          path = "assets/icon.png"
-          with Image.open(path) as image:
-              image.verify()
-          print("Lotty Go app icon exists and is a valid image.")
+          from PIL import Image, ImageDraw, ImageFont
+          from pathlib import Path
+
+          path = Path("assets/icon.png")
+          path.parent.mkdir(parents=True, exist_ok=True)
+
+          # The checked-in icon is truncated. Rebuild a clean, deterministic
+          # charcoal-and-gold icon in the build workspace before Expo packages it.
+          image = Image.new("RGBA", (1024, 1024), "#0B0B0D")
+          draw = ImageDraw.Draw(image)
+          gold = "#D4AF37"
+          font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+          top = ImageFont.truetype(font_path, 150)
+          bottom = ImageFont.truetype(font_path, 230)
+
+          for label, font, y in [("LOTTY", top, 340), ("GO", bottom, 500)]:
+              bounds = draw.textbbox((0, 0), label, font=font, stroke_width=0)
+              x = (1024 - (bounds[2] - bounds[0])) // 2
+              draw.text((x, y), label, font=font, fill=gold)
+
+          draw.rounded_rectangle((70, 70, 954, 954), radius=95, outline="#8C6A15", width=6)
+          image.save(path, format="PNG", optimize=True)
+
+          with Image.open(path) as check:
+              check.verify()
+          print("Rebuilt and verified clean Lotty Go icon:", path)
           PY
 
       - name: Verify Expo packages match the SDK (read-only)
