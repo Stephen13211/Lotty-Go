@@ -24,10 +24,13 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           BUILD_ID: ${{ inputs.build_id }}
         run: |
-          npx --yes eas-cli@latest build:download --id "$BUILD_ID" --path "$RUNNER_TEMP/lotty-go.apk"
+          npx --yes eas-cli@latest build:view "$BUILD_ID" --json > "$RUNNER_TEMP/build.json"
+          APK_URL="$(node -e "const b=require(process.argv[1]); const u=b.artifacts?.applicationArchive?.url || b.artifacts?.buildUrl || b.artifacts?.applicationArchiveUrl; if(!u) { console.error(JSON.stringify(b,null,2)); process.exit(1); } process.stdout.write(u);" "$RUNNER_TEMP/build.json")"
+          curl --fail --location --retry 3 "$APK_URL" --output "$RUNNER_TEMP/lotty-go.apk"
           test -s "$RUNNER_TEMP/lotty-go.apk"
           ls -lh "$RUNNER_TEMP/lotty-go.apk"
           file "$RUNNER_TEMP/lotty-go.apk"
+          sha256sum "$RUNNER_TEMP/lotty-go.apk"
 
       - name: Inspect APK structure and Android compatibility
         shell: bash
