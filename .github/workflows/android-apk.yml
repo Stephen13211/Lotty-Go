@@ -64,23 +64,11 @@ jobs:
       - name: Check Expo configuration
         run: npx expo config --type public
 
-      - name: Build Android APK with Expo EAS
+      - name: Build Android APK locally on GitHub Actions
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas-cli@latest build --platform android --profile preview --non-interactive --json > build-result.json
-          cat build-result.json
-
-      - name: Attach the built APK to this workflow run
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          BUILD_ID="$(node -e 'const fs=require("fs");const r=JSON.parse(fs.readFileSync("build-result.json","utf8"));const b=Array.isArray(r)?r[r.length-1]:r;process.stdout.write(String(b.id))')"
-          echo "Build ID: $BUILD_ID"
-          npx --yes eas-cli@latest build:view "$BUILD_ID" --json > build-view.json
-          APK_URL="$(node -e 'const fs=require("fs");const b=JSON.parse(fs.readFileSync("build-view.json","utf8"));const a=b.artifacts||{};const u=a.applicationArchiveUrl||(a.applicationArchive&&a.applicationArchive.url)||a.buildUrl;if(!u){console.error(JSON.stringify(b,null,2));process.exit(1)}process.stdout.write(u)')"
-          echo "APK URL: $APK_URL"
-          curl --fail --location --retry 3 "$APK_URL" --output lotty-go.apk
+          npx eas-cli@latest build --platform android --profile preview --local --output lotty-go.apk --non-interactive
           test -s lotty-go.apk
           ls -lh lotty-go.apk
           sha256sum lotty-go.apk
