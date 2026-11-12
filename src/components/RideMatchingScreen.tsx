@@ -33,7 +33,7 @@ export default function RideMatchingScreen({ride,dispatchStatus,nearbyDrivers=[]
    <Text style={s.label}>DESTINATION</Text><Text style={s.address}>{ride.dropoff_address}</Text>
    <View style={s.row}><Text style={s.muted}>{ride.distance_km.toFixed(1)} km · {ride.ride_type.replace(/_/g," ")}</Text><Text style={s.fare}>R{Number(ride.fare).toFixed(2)}</Text></View>
   </View>
-  <View style={s.searching}>{dispatchStatus==="searching"?<Icon name="car-off" size={20} color={colors.brandPrimary}/>:<ActivityIndicator color={colors.brandPrimary}/>}<Text style={s.muted}>{dispatchStatus==="searching"?"No eligible driver is available right now. We'll keep checking nearby drivers.":"Offering your ride to nearby drivers. Each driver has 7 seconds to accept."}</Text></View>
+  <View style={s.searching}>{dispatchStatus==="searching"?<Icon name="car-off" size={20} color={colors.brandPrimary}/>:<ActivityIndicator color={colors.brandPrimary}/>}<Text style={s.muted}>{dispatchStatus==="searching"?"No eligible driver is available right now. We'll keep checking nearby drivers.":"Offering your ride to nearby drivers. Each driver has 10 seconds to accept."}</Text></View>
   <Pressable disabled={busy} onPress={()=>setShowReasons(v=>!v)} style={s.cancel}>{busy?<ActivityIndicator color={colors.error}/>:<Text style={s.cancelText}>Cancel request</Text>}</Pressable>
   {showReasons?<View style={s.reasons}><Text style={s.label}>WHY ARE YOU CANCELLING?</Text>{reasons.map(r=><Pressable key={r} onPress={()=>choose(r)} style={s.reason}><Text style={s.address}>{r}</Text></Pressable>)}</View>:null}
  </View>;
