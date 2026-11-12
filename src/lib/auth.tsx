@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
   const signUp = async (email: string, password: string, full_name: string, r: Role) => {
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, role: r } } });
+    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, role: r }, emailRedirectTo: "lottygo://auth/callback" } });
     if (error) throw error;
   };
   const signOut = async () => { await supabase.auth.signOut(); setRoleState(null); };
