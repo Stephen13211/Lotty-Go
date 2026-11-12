@@ -56,8 +56,10 @@ jobs:
           print("Rebuilt and verified clean Lotty Go icon:", path)
           PY
 
-      - name: Verify Expo packages match the SDK (read-only)
-        run: npx expo install --check
+      - name: Align Expo packages with SDK 58
+        run: |
+          npx expo install --fix
+          npx expo install --check
 
       - name: Check Expo configuration
         run: npx expo config --type public
