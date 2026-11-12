@@ -4,7 +4,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Swi
 import * as DocumentPicker from "expo-document-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
-import { getDriverProfile, saveDriverApplication, setWomenOnlyPreference, type DriverProfile } from "@/src/lib/driver";
+import { getDriverProfile, saveDriverApplication, setLottyWomenEnabled, type DriverProfile } from "@/src/lib/driver";
 import { supabase } from "@/src/lib/supabase";
 import { colors, radius, spacing } from "@/src/theme";
 
@@ -36,13 +36,13 @@ export default function DriverApplication() {
   const [phone, setPhone] = useState("");
   const [vehicleType, setVehicleType] = useState<"car" | "motorcycle">("car");
   const [make, setMake] = useState(""); const [model, setModel] = useState(""); const [year, setYear] = useState(""); const [registration, setRegistration] = useState("");
-  const [womenOnly, setWomenOnly] = useState(false);
+  const [womenServiceEnabled, setWomenServiceEnabled] = useState(false);
 
   useEffect(() => {
     if (!session) { setLoading(false); return; }
     getDriverProfile(session.user.id).then(p => {
       setProfile(p);
-      if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenOnly(!!p.women_riders_only); }
+      if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenServiceEnabled(!!p.women_service_enabled); }
     }).catch(e => Alert.alert("Could not load application", e.message)).finally(() => setLoading(false));
   }, [session?.user.id]);
 
@@ -115,9 +115,15 @@ export default function DriverApplication() {
     setSaving(true);
     try {
       if (profile?.application_status === "approved") {
-        await setWomenOnlyPreference(womenOnly); setProfile({ ...profile, women_riders_only: womenOnly }); Alert.alert("Preference updated", "Your women-only ride preference has been updated.");
+        if (!profile.women_service_approved) {
+          Alert.alert("Lotty Women not approved", "Your normal driver approval remains active. You can continue receiving standard rides and eligible courier requests.");
+          return;
+        }
+        await setLottyWomenEnabled(womenServiceEnabled);
+        setProfile({ ...profile, women_service_enabled: womenServiceEnabled });
+        Alert.alert("Preference updated", womenServiceEnabled ? "You can now receive Lotty Women requests as well as normal eligible trips." : "Lotty Women requests are switched off. Normal eligible trips remain available.");
       } else {
-        const saved = await saveDriverApplication({ user_id: session.user.id, legal_name: legalName.trim(), phone: phone.trim(), vehicle_type: vehicleType, vehicle_make: make.trim(), vehicle_model: model.trim(), vehicle_year: year ? Number(year) : null, vehicle_registration: registration.trim().toUpperCase(), women_riders_only: womenOnly });
+        const saved = await saveDriverApplication({ user_id: session.user.id, legal_name: legalName.trim(), phone: phone.trim(), vehicle_type: vehicleType, vehicle_make: make.trim(), vehicle_model: model.trim(), vehicle_year: year ? Number(year) : null, vehicle_registration: registration.trim().toUpperCase() });
         setProfile(saved); Alert.alert("Application saved", "Your driver application is now pending review. You cannot go online until Lotty Go approves it.");
       }
     } catch (e: any) { Alert.alert("Could not save", e?.message ?? "Please try again."); }
@@ -148,7 +154,7 @@ export default function DriverApplication() {
     <Field label="Model" value={model} onChangeText={setModel} placeholder="Corolla" />
     <Field label="Year" value={year} onChangeText={setYear} placeholder="2022" keyboardType="number-pad" />
     <Field label="Registration number" value={registration} onChangeText={setRegistration} placeholder="CA 123-456" />
-    <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Only accept women riders</Text><Text style={s.muted}>Your preference will be subject to Lotty Women eligibility and approval.</Text></View><Switch value={womenOnly} onValueChange={setWomenOnly} trackColor={{ true: colors.brandPrimary }} /></View>
+    {status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women access</Text><Text style={s.muted}>{status === "approved" ? "This service has a separate approval process. Your normal driver access is not affected." : "Lotty Women is reviewed separately from your standard driver application. Not being approved for it will not prevent normal driving once your standard application is approved."}</Text></View></View>}
     <Text style={s.section}>DOCUMENTS AND VERIFICATION</Text>
     {DOCUMENTS.map(doc => <View key={doc.type} style={s.doc}>
       <Icon name="file-document-outline" size={20} color={colors.brandPrimary} />
