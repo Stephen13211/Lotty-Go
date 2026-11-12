@@ -1,0 +1,57 @@
+name: Diagnose Lotty Go APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Existing EAS Android build ID to inspect"
+        required: true
+        default: "212d8cf0-4ca0-4183-a6cd-a399081cae90"
+
+jobs:
+  inspect-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download the exact APK from EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          npx --yes eas-cli@latest build:download --id "$BUILD_ID" --path "$RUNNER_TEMP/lotty-go.apk"
+          test -s "$RUNNER_TEMP/lotty-go.apk"
+          ls -lh "$RUNNER_TEMP/lotty-go.apk"
+          file "$RUNNER_TEMP/lotty-go.apk"
+
+      - name: Inspect APK structure and Android compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$RUNNER_TEMP/lotty-go.apk"
+          echo "=== APK ZIP integrity ==="
+          unzip -t "$APK" | tail -n 3
+          echo "=== Android SDK tools ==="
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/build-tools"
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          AAPT="$BUILD_TOOLS/aapt"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          if [ ! -x "$AAPT" ] || [ ! -x "$APKSIGNER" ]; then
+            echo "Required Android build tools not found in $BUILD_TOOLS"
+            find "$ANDROID_HOME" -type f \( -name aapt -o -name apksigner \) | head -n 20
+            exit 1
+          fi
+          echo "=== APK package, SDK and launcher metadata ==="
+          "$AAPT" dump badging "$APK" | head -n 35
+          echo "=== APK signing verification ==="
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          echo "=== Native libraries / supported CPU architectures ==="
+          unzip -Z1 "$APK" | grep -E '^lib/[^/]+/[^/]+\.so$' | cut -d/ -f2 | sort -u || true
+          echo "=== Native library files ==="
+          unzip -Z1 "$APK" | grep -E '^lib/[^/]+/[^/]+\.so$' | head -n 80 || true
+          echo "=== APK size ==="
+          du -h "$APK"
