@@ -37,7 +37,6 @@ export async function saveDriverApplication(input: {
   vehicle_model: string;
   vehicle_year: number | null;
   vehicle_registration: string;
-  women_riders_only: boolean;
 }) {
   const { data, error } = await supabase.from("driver_profiles").upsert({
     ...input,
