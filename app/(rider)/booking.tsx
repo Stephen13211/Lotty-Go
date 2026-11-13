@@ -55,6 +55,7 @@ export default function Booking() {
         <Text style={{ color: colors.muted, fontSize: 13, marginBottom: spacing.md }}>~{km.toFixed(1)} km</Text>
         {RIDE_OPTIONS.map(o => {
           const active = o.type === sel;
+          const genderRestricted = o.type === "lotty_xl" && !canUseLottyWomen;
           return (
             <Pressable key={o.type} onPress={() => setSel(o.type)} style={[s.opt, active && { borderColor: colors.borderStrong, backgroundColor: colors.brandTertiary }]}>
               <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.optIcon}><Icon name={o.icon as any} size={26} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
