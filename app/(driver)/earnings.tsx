@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
