@@ -227,7 +227,7 @@ export default function RiderHome() {
 
   const straightLineKm = routePoints.length > 1 ? routePoints.slice(1).reduce((total, point, index) => total + haversineKm(routePoints[index].coords, point.coords), 0) : 0;
   const km = roadRouteDistanceKm ?? straightLineKm;
-  const selectedOption = RIDE_OPTIONS.find(option => option.type === selectedRide) ?? RIDE_OPTIONS[0];
+  const selectedOption = RIDE_OPTIONS.find(option => option.type === selectedRide) ?? RIDE_OPTIONS[0];\n  const riderGender = session?.user?.user_metadata?.gender;\n  const canUseLottyWomen = riderGender === "female";
 
   const confirmRide = async () => {
     if (!pickup || !destination || stops.some(stop => !stop.coords)) {
@@ -238,7 +238,7 @@ export default function RiderHome() {
       Alert.alert("Sign in required", "Please sign in before requesting a ride.");
       return;
     }
-    if (selectedOption.available === false) {
+    if (selectedRide === "lotty_xl" && !canUseLottyWomen) {\n      Alert.alert("Lotty Women unavailable", "Lotty Women is only available to female riders. You can still book any standard ride.");\n      return;\n    }\n    if (selectedOption.available === false) {
       Alert.alert("Coming soon", "Lotty Women is not available yet.");
       return;
     }
@@ -362,9 +362,9 @@ export default function RiderHome() {
               <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.rideIcon}><Icon name={option.icon as any} size={25} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.rideName}>{option.name}</Text>
-                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{unavailable ? " · Coming soon" : " · Available"}</Text>
+                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{genderRestricted ? " · Female riders only" : option.available === false ? " · Coming soon" : " · Available"}</Text>
               </View>
-              {unavailable ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier)}` : "—"}</Text>}
+              {genderRestricted ? <Text style={s.comingSoon}>LOCKED</Text> : option.available === false ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier)}` : "—"}</Text>}
               {active && !unavailable && <Icon name="check-circle" size={21} color={colors.brandPrimary} />}
             </Pressable>;
           })}
