@@ -1,4 +1,5 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,7 +11,7 @@ export default function DriverProfile(){
  const name=(session?.user?.user_metadata?.full_name as string)??session?.user?.email??"Driver";
  return <View style={{flex:1,backgroundColor:colors.surface,paddingTop:insets.top}}>
   <View style={{alignItems:"center",padding:spacing.xl,gap:spacing.sm}}>
-   <View style={s.avatar}><Icon name="steering" size={38} color={colors.onBrandSecondary}/></View>
+   <LinearGradient colors={["#F9E27D", "#D4AF37", "#8C6A15"]} style={s.avatar}><Icon name="steering" size={38} color={colors.onBrandPrimary}/></LinearGradient>
    <Text style={{fontSize:20,fontWeight:"800",color:colors.onSurface}}>{name}</Text><Text style={{fontSize:13,color:colors.muted}}>Driver · Lotty Go</Text>
   </View>
   <View style={s.group}>
@@ -21,4 +22,4 @@ export default function DriverProfile(){
   <Pressable onPress={async()=>{await setRole("rider");router.replace("/(rider)");}} style={s.sw}><Icon name="map-marker-radius" size={18} color={colors.onBrandPrimary}/><Text style={{color:colors.onBrandPrimary,fontWeight:"700"}}>Switch to Rider</Text></Pressable>
  </View>;
 }
-const s=StyleSheet.create({avatar:{width:84,height:84,borderRadius:radius.pill,backgroundColor:colors.brandSecondary,alignItems:"center",justifyContent:"center"},group:{marginHorizontal:spacing.lg,backgroundColor:colors.surfaceSecondary,borderRadius:radius.md,overflow:"hidden"},row:{minHeight:66,padding:spacing.md,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.divider,flexDirection:"row",alignItems:"center",gap:spacing.md},rowTitle:{fontWeight:"800",color:colors.onSurface},sub:{fontSize:11,color:colors.muted},sw:{margin:spacing.lg,height:52,borderRadius:radius.pill,backgroundColor:colors.brandPrimary,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:spacing.sm}});
+const s=StyleSheet.create({avatar:{width:84,height:84,borderRadius:radius.pill,backgroundColor:colors.brandSecondary,alignItems:"center",justifyContent:"center"},group:{marginHorizontal:spacing.lg,backgroundColor:"#151517",borderRadius:radius.lg,borderWidth:1,borderColor:"#39301B",overflow:"hidden"},row:{minHeight:66,padding:spacing.md,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.divider,flexDirection:"row",alignItems:"center",gap:spacing.md},rowTitle:{fontWeight:"800",color:colors.onSurface},sub:{fontSize:11,color:colors.muted},sw:{margin:spacing.lg,height:52,borderRadius:radius.pill,backgroundColor:colors.brandPrimary,alignItems:"center",justifyContent:"center",flexDirection:"row",gap:spacing.sm}});
