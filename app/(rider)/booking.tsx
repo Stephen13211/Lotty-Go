@@ -1,4 +1,5 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
@@ -54,7 +55,7 @@ export default function Booking() {
           const active = o.type === sel;
           return (
             <Pressable key={o.type} onPress={() => setSel(o.type)} style={[s.opt, active && { borderColor: colors.borderStrong, backgroundColor: colors.brandTertiary }]}>
-              <View style={s.optIcon}><Icon name={o.icon as any} size={28} color={colors.onSurface} /></View>
+              <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.optIcon}><Icon name={o.icon as any} size={26} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "700", color: colors.onSurface }}>{o.name}</Text>
                 <Text style={{ color: colors.muted, fontSize: 12 }}>{o.seats} seats · 3 min</Text>
@@ -63,8 +64,10 @@ export default function Booking() {
             </Pressable>
           );
         })}
-        <Pressable onPress={confirm} disabled={busy} style={[s.cta, { opacity: busy ? 0.8 : 1 }]}>
-          {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Confirm ride</Text>}
+        <Pressable onPress={confirm} disabled={busy} style={({ pressed }) => [s.ctaShell, { opacity: busy ? 0.8 : 1 }, pressed && { transform: [{ scale: 0.985 }] }]}>
+          <LinearGradient colors={["#F9E27D", "#D4AF37", "#A77C20"]} style={s.cta}>
+            {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Confirm ride</Text>}
+          </LinearGradient>
         </Pressable>
       </View>
     </View>
@@ -74,8 +77,9 @@ const s = StyleSheet.create({
   back: { position: "absolute", left: spacing.lg, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", elevation: 4 },
   sheet: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.xl, gap: spacing.sm, elevation: 10 },
   handle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong, marginBottom: spacing.md },
-  opt: { flexDirection: "row", alignItems: "center", padding: spacing.md, gap: spacing.md, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, marginBottom: spacing.sm },
-  optIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
-  cta: { marginTop: spacing.md, height: 56, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
-  ctaT: { color: colors.onBrandPrimary, fontSize: 17, fontWeight: "700" },
+  opt: { flexDirection: "row", alignItems: "center", padding: spacing.sm, gap: spacing.md, borderRadius: 17, borderWidth: 1.5, borderColor: colors.border, marginBottom: spacing.xs, backgroundColor: "#141416" },
+  optIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#55451E" },
+  ctaShell: { marginTop: spacing.md, borderRadius: radius.pill, overflow: "hidden", shadowColor: colors.brandPrimary, shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
+  cta: { height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  ctaT: { color: "#17130A", fontSize: 16, fontWeight: "900", letterSpacing: 0.4 },
 });
