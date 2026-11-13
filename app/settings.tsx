@@ -51,9 +51,9 @@ export default function Settings() {
 }
 const s=StyleSheet.create({
  title:{fontSize:30,fontWeight:"900",color:colors.onSurface}, subtitle:{fontSize:14,color:colors.muted,marginTop:-spacing.md},
- group:{backgroundColor:colors.surfaceSecondary,borderRadius:radius.lg,paddingHorizontal:spacing.md,paddingVertical:spacing.sm},
+ group:{backgroundColor:"#151517",borderRadius:radius.lg,borderWidth:1,borderColor:"#39301B",paddingHorizontal:spacing.md,paddingVertical:spacing.sm,shadowColor:"#000",shadowOpacity:0.16,shadowRadius:10,elevation:3},
  heading:{fontSize:11,fontWeight:"900",letterSpacing:1,color:colors.muted,padding:spacing.sm},
- item:{minHeight:66,flexDirection:"row",alignItems:"center",gap:spacing.md,padding:spacing.sm,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.divider},
+ item:{minHeight:68,flexDirection:"row",alignItems:"center",gap:spacing.md,padding:spacing.sm,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.divider},
  icon:{width:40,height:40,borderRadius:radius.md,backgroundColor:colors.brandTertiary,alignItems:"center",justifyContent:"center"},
  itemTitle:{fontSize:14,fontWeight:"800",color:colors.onSurface},detail:{fontSize:11,color:colors.muted},
  logout:{minHeight:52,borderWidth:1,borderColor:colors.border,borderRadius:radius.pill,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:spacing.sm}
