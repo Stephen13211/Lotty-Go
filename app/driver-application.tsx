@@ -37,12 +37,13 @@ export default function DriverApplication() {
   const [vehicleType, setVehicleType] = useState<"car" | "motorcycle">("car");
   const [make, setMake] = useState(""); const [model, setModel] = useState(""); const [year, setYear] = useState(""); const [registration, setRegistration] = useState("");
   const [womenServiceEnabled, setWomenServiceEnabled] = useState(false);
+  const [womenServiceRequested, setWomenServiceRequested] = useState(false);
 
   useEffect(() => {
     if (!session) { setLoading(false); return; }
     getDriverProfile(session.user.id).then(p => {
       setProfile(p);
-      if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenServiceEnabled(!!p.women_service_enabled); }
+      if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenServiceEnabled(!!p.women_service_enabled); setWomenServiceRequested(!!p.women_service_requested); }
     }).catch(e => Alert.alert("Could not load application", e.message)).finally(() => setLoading(false));
   }, [session?.user.id]);
 
@@ -123,7 +124,7 @@ export default function DriverApplication() {
         setProfile({ ...profile, women_service_enabled: womenServiceEnabled });
         Alert.alert("Preference updated", womenServiceEnabled ? "You can now receive Lotty Women requests as well as normal eligible trips." : "Lotty Women requests are switched off. Normal eligible trips remain available.");
       } else {
-        const saved = await saveDriverApplication({ user_id: session.user.id, legal_name: legalName.trim(), phone: phone.trim(), vehicle_type: vehicleType, vehicle_make: make.trim(), vehicle_model: model.trim(), vehicle_year: year ? Number(year) : null, vehicle_registration: registration.trim().toUpperCase() });
+        const saved = await saveDriverApplication({ user_id: session.user.id, legal_name: legalName.trim(), phone: phone.trim(), vehicle_type: vehicleType, vehicle_make: make.trim(), vehicle_model: model.trim(), vehicle_year: year ? Number(year) : null, vehicle_registration: registration.trim().toUpperCase(), women_service_requested: vehicleType === "car" && womenServiceRequested });
         setProfile(saved); Alert.alert("Application saved", "Your driver application is now pending review. You cannot go online until Lotty Go approves it.");
       }
     } catch (e: any) { Alert.alert("Could not save", e?.message ?? "Please try again."); }
@@ -154,8 +155,7 @@ export default function DriverApplication() {
     <Field label="Model" value={model} onChangeText={setModel} placeholder="Corolla" />
     <Field label="Year" value={year} onChangeText={setYear} placeholder="2022" keyboardType="number-pad" />
     <Field label="Registration number" value={registration} onChangeText={setRegistration} placeholder="CA 123-456" />
-    {vehicleType !== "motorcycle" ? (status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women access</Text><Text style={s.muted}>{status === "approved" ? "This service has a separate approval process. Your normal driver access is not affected." : "Lotty Women is reviewed separately from your standard driver application. Not being approved for it will not prevent normal driving once your standard application is approved."}</Text></View></View>
-    ) : null}
+    {vehicleType !== "motorcycle" ? (status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Apply for Lotty Women</Text><Text style={s.muted}>{status === "approved" ? "Your normal driver approval remains active. Contact Lotty Go to request a separate Lotty Women review." : "Optional for car applicants. Lotty Go reviews this separately; declining it will not affect approval for normal rides."}</Text></View>{status !== "approved" ? <Switch value={womenServiceRequested} onValueChange={setWomenServiceRequested} trackColor={{ true: colors.brandPrimary }} /> : null}</View>) : null}
     <Text style={s.section}>DOCUMENTS AND VERIFICATION</Text>
     {DOCUMENTS.map(doc => <View key={doc.type} style={s.doc}>
       <Icon name="file-document-outline" size={20} color={colors.brandPrimary} />
@@ -173,7 +173,7 @@ const s = StyleSheet.create({
   statusCard: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.brandTertiary, gap: 5 }, status: { fontSize: 20, fontWeight: "900", color: colors.brandPrimary },
   section: { fontSize: 11, fontWeight: "900", letterSpacing: 1, color: colors.muted, marginTop: spacing.sm }, label: { fontSize: 12, fontWeight: "800", color: colors.onSurfaceSecondary },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, color: colors.onSurface, backgroundColor: colors.surfaceSecondary },
-  choice: { flex: 1, minHeight: 52, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm }, choiceActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, choiceText: { fontWeight: "800", color: colors.onSurface },
+  choice: { flex: 1, minWidth: 0, minHeight: 60, paddingHorizontal: spacing.xs, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs }, choiceActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, choiceText: { flexShrink: 1, fontSize: 12, textAlign: "center", fontWeight: "800", color: colors.onSurface },
   preference: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, backgroundColor: "#151517", borderRadius: 14, borderWidth: 1, borderColor: "#39301B" }, itemTitle: { fontWeight: "800", color: colors.onSurface },
   doc: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider, paddingVertical: spacing.xs }, pending: { fontSize: 9, fontWeight: "900", color: colors.warning }, uploaded: { fontSize: 9, fontWeight: "900", color: colors.brandPrimary },
   uploadButton: { minWidth: 70, minHeight: 36, borderRadius: radius.md, borderWidth: 1, borderColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm }, uploadText: { fontSize: 12, fontWeight: "800", color: colors.brandPrimary },
