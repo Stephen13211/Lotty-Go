@@ -1,5 +1,4 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useEffect, useMemo, useState } from "react";
 import { Linking } from "react-native";
