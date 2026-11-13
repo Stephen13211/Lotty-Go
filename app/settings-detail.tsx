@@ -19,4 +19,4 @@ export default function SettingsDetail(){
   <View style={s.card}><Icon name="information-outline" size={24} color={colors.brandPrimary}/><Text style={s.note}>{item.note}</Text></View>
  </ScrollView>;
 }
-const s=StyleSheet.create({title:{fontSize:28,fontWeight:"900",color:colors.onSurface},body:{fontSize:16,lineHeight:24,color:colors.onSurfaceSecondary},card:{padding:spacing.lg,borderRadius:radius.md,backgroundColor:colors.brandTertiary,flexDirection:"row",gap:spacing.md,alignItems:"flex-start"},note:{flex:1,color:colors.onBrandTertiary,lineHeight:20,fontSize:13}});
+const s=StyleSheet.create({title:{fontSize:28,fontWeight:"900",color:colors.onSurface},body:{fontSize:16,lineHeight:24,color:colors.onSurfaceSecondary},card:{padding:spacing.lg,borderRadius:radius.lg,borderWidth:1,borderColor:"#55451E",backgroundColor:"#1D180E",flexDirection:"row",gap:spacing.md,alignItems:"flex-start"},note:{flex:1,color:colors.onBrandTertiary,lineHeight:20,fontSize:13}});
