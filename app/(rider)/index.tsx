@@ -1,4 +1,5 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -109,7 +110,7 @@ function PlaceInput({ label, value, placeholder, icon, onChangeText, onSelect, r
 export default function RiderHome() {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
-  const snaps = useMemo(() => ["62%", "90%"], []);
+  const snaps = useMemo(() => ["48%", "76%"], []);
   const { session, configured } = useAuth();
   const queryClient = useQueryClient();
   const { data: activeRide } = useQuery({ queryKey: ["active-ride", session?.user.id, "rider"], queryFn: () => getActiveRide(session!.user.id, "rider"), enabled: configured && !!session, refetchInterval: 2000 });
@@ -306,7 +307,7 @@ export default function RiderHome() {
         <Icon name="menu" size={22} color={colors.onSurface} />
       </View>
 
-      <BottomSheet ref={sheetRef} index={1} snapPoints={snaps} enableDynamicSizing={false}
+      <BottomSheet ref={sheetRef} index={0} snapPoints={snaps} enableDynamicSizing={false}
         backgroundStyle={{ backgroundColor: colors.surface }} handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}>
         <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.xl, gap: spacing.sm }}
           keyboardShouldPersistTaps="always">
@@ -326,9 +327,9 @@ export default function RiderHome() {
             </View>
             <View style={s.locationDivider} />
             <View style={s.actionRow}>
-              <Text style={s.locationLabel}>ADD STOPS (OPTIONAL · UP TO 2)</Text>
-              <Pressable disabled={stops.length >= 2} onPress={() => setStops(old => old.length >= 2 ? old : [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={[s.plusButton, stops.length >= 2 && { opacity: 0.4 }]}>
-                <Icon name="plus" size={22} color={colors.onBrandPrimary} />
+              <View style={s.addStopsLabel}><Icon name="map-marker-plus-outline" size={16} color={colors.brandPrimary} /><Text style={s.locationLabel}>ADD STOPS · UP TO 2</Text></View>
+              <Pressable disabled={stops.length >= 2} onPress={() => setStops(old => old.length >= 2 ? old : [...old, { id: String(Date.now()), label: "", coords: null as any }])} style={[s.addStopButton, stops.length >= 2 && { opacity: 0.4 }]}>
+                <Icon name="plus" size={15} color={colors.brandPrimary} /><Text style={s.addStopText}>Add stop</Text>
               </Pressable>
             </View>
             {stops.map((stop, index) => (
@@ -358,7 +359,7 @@ export default function RiderHome() {
             const unavailable = option.available === false;
             return <Pressable key={option.type} disabled={unavailable} onPress={() => setSelectedRide(option.type)}
               style={[s.rideOption, active && s.rideOptionActive, unavailable && { opacity: 0.55 }]}>
-              <View style={s.rideIcon}><Icon name={option.icon as any} size={27} color={colors.onSurface} /></View>
+              <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.rideIcon}><Icon name={option.icon as any} size={25} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.rideName}>{option.name}</Text>
                 <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{unavailable ? " · Coming soon" : " · Available"}</Text>
@@ -395,12 +396,12 @@ export default function RiderHome() {
 const s = StyleSheet.create({
   nearbyCar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.brandPrimary, borderWidth: 2, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
   menu: { position: "absolute", left: spacing.lg, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-  title: { fontSize: 28, fontWeight: "800", color: colors.onSurface },
-  locationBox: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: spacing.sm },
+  title: { fontSize: 25, fontWeight: "900", color: colors.onSurface, letterSpacing: -0.5 },
+  locationBox: { backgroundColor: "#141416", borderRadius: 18, borderWidth: 1, borderColor: "#39301B", paddingHorizontal: spacing.md, paddingVertical: 8, marginTop: spacing.xs, shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 5 },
   placeWrap: { position: "relative" },
-  locationLabel: { color: colors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: spacing.xs },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 46 },
-  input: { flex: 1, fontSize: 13, color: colors.onSurface, paddingVertical: spacing.xs },
+  locationLabel: { color: "#B9B3A4", fontSize: 9, fontWeight: "900", letterSpacing: 1.15, marginTop: 1 },
+  inputRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 38 },
+  input: { flex: 1, fontSize: 13, color: colors.onSurface, paddingVertical: 5 },
   suggestions: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: spacing.sm, elevation: 5, zIndex: 30 },
   suggestionRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   suggestionText: { flex: 1, color: colors.onSurface, fontSize: 13 },
@@ -409,7 +410,9 @@ const s = StyleSheet.create({
   actionText: { color: colors.brandPrimary, fontSize: 12, fontWeight: "800" },
   selectedText: { color: colors.brandPrimary, fontSize: 11, fontWeight: "700", paddingVertical: spacing.xs },
   locationDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
-  plusButton: { width: 34, height: 34, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  addStopsLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
+  addStopButton: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radius.pill, borderWidth: 1, borderColor: "#705B25", backgroundColor: "#211C10", paddingHorizontal: 11, paddingVertical: 6 },
+  addStopText: { color: colors.goldLight, fontSize: 11, fontWeight: "800" },
   removeButton: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   stopWrap: { marginTop: spacing.sm },
   section: { marginTop: spacing.md, color: colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
@@ -417,7 +420,7 @@ const s = StyleSheet.create({
   distanceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   rideOption: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, marginTop: spacing.xs },
   rideOptionActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
-  rideIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
+  rideIcon: { width: 46, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#55451E" },
   rideName: { color: colors.onSurface, fontSize: 14, fontWeight: "800" },
   fare: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   comingSoon: { color: colors.muted, fontSize: 10, fontWeight: "800" },
