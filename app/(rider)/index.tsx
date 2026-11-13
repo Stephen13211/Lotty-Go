@@ -219,10 +219,10 @@ export default function RiderHome() {
       .catch(() => {
         if (!cancelled) {
           setRoadRouteCoordinates(routePoints.map(point => point.coords));
-          setRoadRouteDistanceKm(
-            routePoints.slice(1).reduce((total, point, index) =>
-              total + haversineKm(routePoints[index].coords, point.coords), 0),
-          );
+          const fallbackDistance = routePoints.slice(1).reduce((total, point, index) =>
+            total + haversineKm(routePoints[index].coords, point.coords), 0);
+          setRoadRouteDistanceKm(fallbackDistance);
+          setRoadRouteDurationMinutes(Math.max(1, fallbackDistance * 2));
         }
       });
 
