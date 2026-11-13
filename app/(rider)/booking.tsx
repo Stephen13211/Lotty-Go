@@ -20,15 +20,17 @@ export default function Booking() {
   const pickup = { latitude: parseFloat(pLat || "-26.2041"), longitude: parseFloat(pLng || "28.0473") };
   const dropoff = useMemo(() => ({ latitude: pickup.latitude + 0.04, longitude: pickup.longitude + 0.03 }), [pLat, pLng]);
   const km = useMemo(() => haversineKm(pickup, dropoff), [pLat, pLng]);
-  const [sel, setSel] = useState<RideType>("lotty_x");\n  const canUseLottyWomen = session?.user?.user_metadata?.gender === "female";
+  const [sel, setSel] = useState<RideType>("lotty_x");
+  const canUseLottyWomen = session?.user?.user_metadata?.gender === "female";
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
     if (!configured || !session) { Alert.alert("Supabase required", "Add keys + sign in to confirm."); return; }
-    if (sel === "lotty_xl" && !canUseLottyWomen) { Alert.alert("Lotty Women unavailable", "Lotty Women is only available to female riders."); return; }\n    const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
+    if (sel === "lotty_xl" && !canUseLottyWomen) { Alert.alert("Lotty Women unavailable", "Lotty Women is only available to female riders."); return; }
+    const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
     setBusy(true);
     try {
-      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, payment_method: "cash", fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
+      await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, payment_method: "cash", fare: estimateFare(km, opt.multiplier, Math.max(1, km * 2)), distance_km: Number(km.toFixed(2)) });
       Alert.alert("Ride requested", "Finding a driver near you.");
       router.replace("/(rider)/trips");
     } catch (e: any) { Alert.alert("Failed", e?.message ?? "Try again"); }
@@ -60,7 +62,7 @@ export default function Booking() {
                 <Text style={{ fontWeight: "700", color: colors.onSurface }}>{o.name}</Text>
                 <Text style={{ color: colors.muted, fontSize: 12 }}>{genderRestricted ? "Female riders only" : `${o.seats} seats · 3 min`}</Text>
               </View>
-              {genderRestricted ? <Text style={{ fontWeight: "800", fontSize: 11, color: colors.muted }}>LOCKED</Text> : <Text style={{ fontWeight: "800", fontSize: 17, color: colors.onSurface }}>R{estimateFare(km, o.multiplier)}</Text>}
+              {genderRestricted ? <Text style={{ fontWeight: "800", fontSize: 11, color: colors.muted }}>LOCKED</Text> : <Text style={{ fontWeight: "800", fontSize: 17, color: colors.onSurface }}>R{estimateFare(km, o.multiplier, Math.max(1, km * 2))}</Text>}
             </Pressable>
           );
         })}
