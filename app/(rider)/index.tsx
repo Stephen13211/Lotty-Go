@@ -368,6 +368,7 @@ export default function RiderHome() {
           {RIDE_OPTIONS.map(option => {
             const active = selectedRide === option.type;
             const unavailable = option.available === false;
+            const genderRestricted = option.type === "lotty_xl" && !canUseLottyWomen;
             return <Pressable key={option.type} disabled={unavailable} onPress={() => setSelectedRide(option.type)}
               style={[s.rideOption, active && s.rideOptionActive, unavailable && { opacity: 0.55 }]}>
               <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.rideIcon}><Icon name={option.icon as any} size={25} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
