@@ -2,7 +2,7 @@ name: Lotty Go typecheck
 
 on:
   pull_request:
-    branches: [main]
+    branches: [feature/full-platform-build, design/luxury-ui-refresh]
   push:
     branches: [feature/full-platform-build]
 
