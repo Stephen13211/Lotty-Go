@@ -23,7 +23,13 @@ export const RIDE_OPTIONS:{type:RideType;name:string;seats:number;multiplier:num
  {type:"lotty_xl",name:"Lotty Women",seats:4,multiplier:1,icon:"account-heart",available:true},
  {type:"courier_motorcycle",name:"Lotty Courier",seats:1,multiplier:0.75,icon:"motorbike",available:true}
 ];
-export function estimateFare(km:number,m:number){return Math.round((20+km*9)*m);}
+// Competitive South African starting tariff, benchmarked against published local fare examples.
+// Prices are upfront estimates; the route duration includes every selected stop.
+export const FARE_RATES = { base: 18, perKm: 7.5, perMinute: 0.65, minimum: 28 } as const;
+export function estimateFare(km:number,m:number,minutes:number=Math.max(1,km*2)){
+ const metered = FARE_RATES.base + Math.max(0,km)*FARE_RATES.perKm + Math.max(0,minutes)*FARE_RATES.perMinute;
+ return Math.round(Math.max(FARE_RATES.minimum,metered)*m);
+}
 export function haversineKm(a:{latitude:number;longitude:number},b:{latitude:number;longitude:number}){
  const R=6371,dLat=(b.latitude-a.latitude)*Math.PI/180,dLon=(b.longitude-a.longitude)*Math.PI/180;
  const la1=a.latitude*Math.PI/180,la2=b.latitude*Math.PI/180;
