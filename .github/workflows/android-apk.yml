@@ -3,7 +3,7 @@ name: Lotty Go Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, design/luxury-ui-refresh]
 
 jobs:
   build-android:
