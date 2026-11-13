@@ -2,15 +2,18 @@ name: Lotty Go Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main, design/luxury-ui-refresh]
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Lotty Go
+      - name: Check out the complete Lotty Go app
         uses: actions/checkout@v4
         with:
-          ref: feature/full-platform-build
+          # The complete app (including assets/icon.png) currently lives here.
+          ref: ${{ github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -21,7 +24,57 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Android APK with Expo EAS
-        run: npx eas-cli@latest build --platform android --profile preview --non-interactive
+      - name: Repair and validate the Lotty Go app icon
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          from pathlib import Path
+
+          path = Path("assets/icon.png")
+          path.parent.mkdir(parents=True, exist_ok=True)
+
+          # The checked-in icon is truncated. Rebuild a clean, deterministic
+          # charcoal-and-gold icon in the build workspace before Expo packages it.
+          image = Image.new("RGBA", (1024, 1024), "#0B0B0D")
+          draw = ImageDraw.Draw(image)
+          gold = "#D4AF37"
+          font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+          top = ImageFont.truetype(font_path, 150)
+          bottom = ImageFont.truetype(font_path, 230)
+
+          for label, font, y in [("LOTTY", top, 340), ("GO", bottom, 500)]:
+              bounds = draw.textbbox((0, 0), label, font=font, stroke_width=0)
+              x = (1024 - (bounds[2] - bounds[0])) // 2
+              draw.text((x, y), label, font=font, fill=gold)
+
+          draw.rounded_rectangle((70, 70, 954, 954), radius=95, outline="#8C6A15", width=6)
+          image.save(path, format="PNG", optimize=True)
+
+          with Image.open(path) as check:
+              check.verify()
+          print("Rebuilt and verified clean Lotty Go icon:", path)
+          PY
+
+      - name: Align Expo packages with SDK 58
+        run: |
+          npx expo install --fix
+          npx expo install --check
+
+      - name: Check Expo configuration
+        run: npx expo config --type public
+
+      - name: Build Android APK locally on GitHub Actions
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx eas-cli@latest build --platform android --profile preview --local --output lotty-go.apk --non-interactive
+          test -s lotty-go.apk
+          ls -lh lotty-go.apk
+          sha256sum lotty-go.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lotty-go-apk
+          path: lotty-go.apk

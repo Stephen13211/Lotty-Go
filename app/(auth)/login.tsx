@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -69,9 +70,7 @@ export default function Login() {
         )}
         <Pressable onPress={resetPassword} disabled={busy} style={{ alignSelf: "flex-end", paddingVertical: spacing.xs }}><Text style={{ color: colors.brandPrimary, fontWeight: "700" }}>Forgot password?</Text></Pressable>
 
-        <Pressable onPress={submit} disabled={busy} style={[s.cta, { opacity: busy ? 0.8 : 1 }]}>
-          {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Log in</Text>}
-        </Pressable>
+        <Pressable onPress={submit} disabled={busy} style={({ pressed }) => [s.ctaShell, pressed && { transform: [{ scale: 0.985 }] }, { opacity: busy ? 0.8 : 1 }]}><LinearGradient colors={["#F9E27D", "#D4AF37", "#A77C20"]} style={s.cta}>{busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaT}>Log in</Text>}</LinearGradient></Pressable>
 
         <View style={{ flexDirection: "row", justifyContent: "center", marginTop: spacing.lg }}>
           <Text style={{ color: colors.muted }}>New to Lotty Go? </Text>
@@ -88,7 +87,8 @@ const s = StyleSheet.create({
   sub: { fontSize: 15, color: colors.muted, marginBottom: spacing.lg },
   label: { fontSize: 13, color: colors.onSurfaceSecondary, fontWeight: "600" },
   input: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: 14, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.border },
-  cta: { marginTop: spacing.lg, height: 56, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
+  ctaShell: { marginTop: spacing.lg, borderRadius: radius.pill, overflow: "hidden", shadowColor: colors.brandPrimary, shadowOpacity: 0.3, shadowRadius: 14, elevation: 8 },
+  cta: { height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   ctaT: { color: colors.onBrandPrimary, fontSize: 17, fontWeight: "700" },
 });
 

@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   muted: { color: colors.muted, marginTop: 12 },
   empty: { color: colors.muted, textAlign: "center", marginTop: 40 },
   list: { paddingBottom: 30 },
-  card: { backgroundColor: colors.surfaceSecondary, padding: 18, borderRadius: 14, marginBottom: 14 },
+  card: { backgroundColor: "#151517", padding: 18, borderRadius: 20, borderWidth: 1, borderColor: "#39301B", marginBottom: 14, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 10, elevation: 3 },
   fare: { fontSize: 20, fontWeight: "bold", color: colors.brandPrimary, marginBottom: 10 },
   address: { color: colors.onSurface, marginBottom: 6 },
   status: { color: colors.brandPrimary, fontWeight: "bold", marginTop: 10 },
