@@ -11,7 +11,7 @@ type Application = {
   user_id: string; legal_name: string | null; phone: string | null;
   vehicle_type: string | null; vehicle_make: string | null; vehicle_model: string | null;
   vehicle_year: number | null; vehicle_registration: string | null;
-  application_status: string; women_riders_only: boolean; women_service_approved: boolean;
+  application_status: string; women_riders_only: boolean; women_service_requested: boolean; women_service_approved: boolean;
   created_at: string;
   payout_provider?: string | null; payout_recipient_id?: string | null; payout_status?: string;
 };
@@ -216,7 +216,7 @@ export default function AdminReview() {
           </View>
         ))}
         {missing.length > 0 ? <Text style={s.warning}>Missing baseline documents: {missing.map(type => DOCUMENT_LABELS[type]).join(", ")}</Text> : null}
-        {row.women_riders_only ? <Text style={s.women}>Requests women riders only · Women-service approval: {row.women_service_approved ? "Yes" : "No"}</Text> : null}
+        {row.vehicle_type === "car" ? <Text style={s.women}>Lotty Women application: {row.women_service_requested ? "REQUESTED" : "NOT REQUESTED"} · Separate approval: {row.women_service_approved ? "APPROVED" : "NOT APPROVED"}</Text> : null}
         {row.application_status !== "approved" ? <View style={s.actions}>
           <Pressable disabled={!!busy || !allApproved} onPress={() => reviewApplication(row, true)} style={[s.approve, (!allApproved || !!busy) && s.disabled]}>
             <Text style={s.approveText}>Approve driver</Text>
@@ -225,10 +225,10 @@ export default function AdminReview() {
             <Text style={s.rejectText}>Reject application</Text>
           </Pressable>
         </View> : <View style={{ gap: spacing.xs }}>
-          {row.vehicle_type === "motorcycle" ? <Text style={s.sub}>Courier-only motorcycle drivers are not eligible for Lotty Women.</Text> : <><Text style={s.sub}>Lotty Women eligibility is reviewed separately from general driver approval.</Text>
-          <Pressable disabled={!!busy} onPress={() => setWomenService(row, !row.women_service_approved)} style={s.womenButton}>
-            <Text style={s.womenButtonText}>{row.women_service_approved ? "Disable Lotty Women" : "Approve for Lotty Women"}</Text>
-          </Pressable></>}
+          {row.vehicle_type === "motorcycle" ? <Text style={s.sub}>Courier-only motorcycle drivers are not eligible for Lotty Women.</Text> : <><Text style={s.sub}>Lotty Women access is separate from normal driver approval. A declined or unrequested Lotty Women application does not block ordinary car rides.</Text>
+          {row.women_service_requested ? <Pressable disabled={!!busy} onPress={() => setWomenService(row, !row.women_service_approved)} style={s.womenButton}>
+            <Text style={s.womenButtonText}>{row.women_service_approved ? "Decline / revoke Lotty Women" : "Approve Lotty Women"}</Text>
+          </Pressable> : <Text style={s.sub}>This applicant did not request Lotty Women access.</Text>}</>}
         </View>}
       </View>;
     })}
