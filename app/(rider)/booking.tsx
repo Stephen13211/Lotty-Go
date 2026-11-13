@@ -20,12 +20,12 @@ export default function Booking() {
   const pickup = { latitude: parseFloat(pLat || "-26.2041"), longitude: parseFloat(pLng || "28.0473") };
   const dropoff = useMemo(() => ({ latitude: pickup.latitude + 0.04, longitude: pickup.longitude + 0.03 }), [pLat, pLng]);
   const km = useMemo(() => haversineKm(pickup, dropoff), [pLat, pLng]);
-  const [sel, setSel] = useState<RideType>("lotty_x");
+  const [sel, setSel] = useState<RideType>("lotty_x");\n  const canUseLottyWomen = session?.user?.user_metadata?.gender === "female";
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
     if (!configured || !session) { Alert.alert("Supabase required", "Add keys + sign in to confirm."); return; }
-    const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
+    if (sel === "lotty_xl" && !canUseLottyWomen) { Alert.alert("Lotty Women unavailable", "Lotty Women is only available to female riders."); return; }\n    const opt = RIDE_OPTIONS.find(o => o.type === sel)!;
     setBusy(true);
     try {
       await createRide({ rider_id: session.user.id, pickup_address: "Current location", pickup_lat: pickup.latitude, pickup_lng: pickup.longitude, dropoff_address: destinationAddress, dropoff_lat: dropoff.latitude, dropoff_lng: dropoff.longitude, ride_type: sel, payment_method: "cash", fare: estimateFare(km, opt.multiplier), distance_km: Number(km.toFixed(2)) });
@@ -58,9 +58,9 @@ export default function Booking() {
               <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.optIcon}><Icon name={o.icon as any} size={26} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "700", color: colors.onSurface }}>{o.name}</Text>
-                <Text style={{ color: colors.muted, fontSize: 12 }}>{o.seats} seats · 3 min</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{genderRestricted ? "Female riders only" : `${o.seats} seats · 3 min`}</Text>
               </View>
-              <Text style={{ fontWeight: "800", fontSize: 17, color: colors.onSurface }}>R{estimateFare(km, o.multiplier)}</Text>
+              {genderRestricted ? <Text style={{ fontWeight: "800", fontSize: 11, color: colors.muted }}>LOCKED</Text> : <Text style={{ fontWeight: "800", fontSize: 17, color: colors.onSurface }}>R{estimateFare(km, o.multiplier)}</Text>}
             </Pressable>
           );
         })}
