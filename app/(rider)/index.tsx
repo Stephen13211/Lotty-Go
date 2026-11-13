@@ -383,8 +383,10 @@ export default function RiderHome() {
           </View>
           <Text style={s.paymentNote}>{payment === "card" ? "Card payment is collected securely after the trip, once the final fare and any waiting fee are known. Only drivers with verified Paystack bank accounts can accept card rides." : "Cash rides are paid directly to the driver. Lotty Go does not take a commission from cash fares."}</Text>
           <Pressable onPress={confirmRide} disabled={busy || !!requestedRide || selectedOption.available === false}
-            style={[s.cta, (busy || selectedOption.available === false) && { opacity: 0.55 }]}>
-            {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <Text style={s.ctaText}>Confirm Ride{routePoints.length > 1 ? ` · R${estimateFare(km, selectedOption.multiplier)}` : ""}</Text>}
+            style={({ pressed }) => [s.ctaShell, (busy || selectedOption.available === false) && { opacity: 0.55 }, pressed && { transform: [{ scale: 0.985 }] }]}>
+            <LinearGradient colors={["#F9E27D", "#D4AF37", "#A77C20"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.cta}>
+              {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <><Text style={s.ctaText}>Confirm ride</Text><Text style={s.ctaFare}>{routePoints.length > 1 ? "R" + estimateFare(km, selectedOption.multiplier) : "Continue"}</Text></>}
+            </LinearGradient>
           </Pressable>
           <Text style={s.hint}>Choose a pickup and destination from the suggestions. Add up to two stops between pickup and destination.</Text>
         </BottomSheetScrollView>
@@ -431,6 +433,8 @@ const s = StyleSheet.create({
   paymentText: { color: colors.onSurface, fontWeight: "700" },
   paymentNote: { color: colors.muted, fontSize: 10 },
   hint: { color: colors.muted, fontSize: 11, textAlign: "center", paddingHorizontal: spacing.md },
-  cta: { minHeight: 54, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md, marginTop: spacing.md },
-  ctaText: { color: colors.onBrandPrimary, fontSize: 15, fontWeight: "800" },
+  ctaShell: { marginTop: spacing.md, borderRadius: radius.pill, overflow: "hidden", shadowColor: colors.brandPrimary, shadowOpacity: 0.28, shadowRadius: 13, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
+  cta: { minHeight: 54, borderRadius: radius.pill, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.xl },
+  ctaText: { color: "#17130A", fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
+  ctaFare: { color: "#17130A", fontSize: 15, fontWeight: "900" },
 });
