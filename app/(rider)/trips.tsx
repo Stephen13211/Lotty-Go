@@ -54,10 +54,10 @@ export default function Trips() {
   );
 }
 const s = StyleSheet.create({
-  card: { padding: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surfaceSecondary },
+  card: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: "#151517", borderWidth: 1, borderColor: "#39301B", shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, elevation: 3 },
   pill: { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
   empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.md },
-  payButton: { minHeight: 46, marginTop: spacing.md, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md },
+  payButton: { minHeight: 46, marginTop: spacing.md, borderRadius: radius.pill, backgroundColor: "#D4AF37", alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.md },
   payButtonText: { color: "#fff", fontSize: 12, fontWeight: "900" },
   paid: { color: colors.success, fontSize: 12, fontWeight: "900", marginTop: spacing.md },
   emptyText: { color: colors.muted, fontSize: 14 },
