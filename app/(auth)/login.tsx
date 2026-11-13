@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
