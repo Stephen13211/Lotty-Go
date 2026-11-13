@@ -193,7 +193,7 @@ export default function AdminReview() {
         </View>
         <Text style={s.sub}>{row.phone || "No phone"} · {row.vehicle_type === "motorcycle" ? "Motorcycle · Courier only" : row.vehicle_type === "car" ? "Car" : "Vehicle not selected"}</Text>
         <Text style={s.sub}>{[row.vehicle_year, row.vehicle_make, row.vehicle_model, row.vehicle_registration].filter(Boolean).join(" · ") || "Vehicle details incomplete"}</Text>
-        <View style={{ padding: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, gap: spacing.xs }}>
+        <View style={{ padding: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.xs }}>
           <Text style={s.docName}>CARD PAYOUT ACCOUNT: {(row.payout_status ?? "not_connected").toUpperCase()}</Text>
           <Text style={s.sub}>{row.payout_provider === "paystack" && row.payout_recipient_id ? `Paystack subaccount: ${row.payout_recipient_id}` : "No Paystack subaccount linked"}</Text>
           {row.payout_status === "pending" && row.payout_recipient_id ? <View style={s.actions}>
@@ -243,7 +243,7 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.md },
   title: { fontSize: 28, fontWeight: "900", color: colors.onSurface },
   sub: { fontSize: 12, color: colors.muted, lineHeight: 18 },
-  card: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surfaceSecondary, gap: spacing.sm },
+  card: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: "#151517", gap: spacing.sm },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   name: { fontSize: 16, fontWeight: "900", color: colors.onSurface, flex: 1 },
   status: { fontSize: 10, fontWeight: "900", color: colors.brandPrimary },
