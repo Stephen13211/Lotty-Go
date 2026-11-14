@@ -2,6 +2,7 @@ import Icon from "@react-native-vector-icons/material-design-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -9,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapView, Marker } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
 import { getDriverProfile, setDriverAvailability } from "@/src/lib/driver";
+import { registerDriverPushNotifications, startDriverBackgroundTracking, stopDriverBackgroundTracking } from "@/src/lib/driverBackground";
 import { acceptRide, declineRideOffer, getMyRideOffer } from "@/src/lib/rides";
 import { getActiveRide } from "@/src/lib/activeRide";
 import ActiveRideScreen from "@/src/components/ActiveRideScreen";
@@ -26,6 +28,19 @@ export default function DriverHome() {
 
  useEffect(()=>{if(activeRide)qc.invalidateQueries({queryKey:["driver-ride-offer"]});},[activeRide?.id,qc]);
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),250);return()=>clearInterval(id);},[]);
+
+ useEffect(()=>{
+  const subscription=Notifications.addNotificationResponseReceivedListener(response=>{
+   const data=response.notification.request.content.data as {screen?:string};
+   if(data?.screen==="driver"){
+    qc.invalidateQueries({queryKey:["driver-ride-offer"]});
+    qc.invalidateQueries({queryKey:["active-ride"]});
+    router.push("/(driver)" as any);
+   }
+  });
+  return()=>subscription.remove();
+ },[qc,router]);
+
 
  useEffect(()=>{
   if(!online||!session||activeRide)return;
@@ -66,16 +81,29 @@ export default function DriverHome() {
  const toggleOnline=async()=>{
   if(!approved){Alert.alert("Approval required","Your driver application must be approved before you can go online.");router.push("/driver-application");return;}
   try{
+   if(!session?.user.id)throw new Error("Please sign in again before going online.");
+   await registerDriverPushNotifications(session.user.id);
    const permission=await Location.requestForegroundPermissionsAsync();
    if(permission.status!=="granted"){Alert.alert("Location required","Allow location access so nearby riders can find you.");return;}
    const current=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
    const point={latitude:current.coords.latitude,longitude:current.coords.longitude};
    await setDriverAvailability(true,point.latitude,point.longitude);
+   try{
+    await startDriverBackgroundTracking();
+   }catch(backgroundError){
+    await setDriverAvailability(false).catch(()=>undefined);
+    throw backgroundError;
+   }
    setCoords(point);setOnline(true);
-  }catch(e:any){Alert.alert("Could not go online",e?.message??"Please check your location and try again.");}
+  }catch(e:any){Alert.alert("Could not go online",e?.message??"Please check your location, notifications and background permissions.");}
  };
  const goOffline=async()=>{
-  try{await setDriverAvailability(false);setOnline(false);qc.invalidateQueries({queryKey:["driver-ride-offer"]});}
+  try{
+   await setDriverAvailability(false);
+   await stopDriverBackgroundTracking();
+   setOnline(false);
+   qc.invalidateQueries({queryKey:["driver-ride-offer"]});
+  }
   catch(e:any){Alert.alert("Could not go offline",e?.message??"Please try again.");}
  };
  if(activeRide)return <ActiveRideScreen ride={activeRide} role="driver"/>;
