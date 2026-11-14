@@ -40,6 +40,11 @@ export async function createRide(input:Omit<Ride,"id"|"created_at"|"status"|"dri
  const {data,error}=await supabase.from("rides").insert({...input,status:"requested"}).select().single();
  if(error)throw error;return data as Ride;
 }
+export async function notifyDriverRideOffer(rideId:string,driverId:string){
+ const {data,error}=await supabase.functions.invoke("notify-driver-ride-offer",{body:{rideId,driverId}});
+ if(error)throw error;
+ return data as {sent:number;reason?:string};
+}
 export async function advanceRideDispatch(rideId:string){
  const {data,error}=await supabase.rpc("advance_ride_dispatch",{p_ride_id:rideId});
  if(error)throw error;return (data?.[0]??null) as {dispatch_status:string;offered_driver_id:string|null;offer_expires_at:string|null;attempts:number}|null;
