@@ -150,9 +150,12 @@ export default function AdminReview() {
 
   const reviewApplication = async (row: Application, approved: boolean) => {
     const driverDocs = documents.filter(d => d.driver_id === row.user_id);
-    const present = new Set(driverDocs.map(d => d.document_type));
+    const latestByType = new Map<string, DriverDocument>();
+    [...driverDocs].sort((x, y) => y.created_at.localeCompare(x.created_at)).forEach(doc => { if (!latestByType.has(doc.document_type)) latestByType.set(doc.document_type, doc); });
+    const currentDocs = [...latestByType.values()];
+    const present = new Set(currentDocs.map(d => d.document_type));
     const missing = REQUIRED_DOCUMENTS.filter(type => !present.has(type));
-    const unreviewed = driverDocs.filter(d => d.review_status !== "approved");
+    const unreviewed = currentDocs.filter(d => d.review_status !== "approved");
     if (approved && (missing.length > 0 || unreviewed.length > 0)) {
       const missingLabels = missing.map(type => DOCUMENT_LABELS[type]).join(", ");
       const pendingLabels = unreviewed.map(d => DOCUMENT_LABELS[d.document_type] ?? d.document_type).join(", ");
@@ -218,9 +221,6 @@ export default function AdminReview() {
       const currentDocs = [...latestByType.values()];
       const present = new Set(currentDocs.map(d => d.document_type));
       const missing = REQUIRED_DOCUMENTS.filter(type => !present.has(type));
-      const latestByType = new Map<string, DriverDocument>();
-      [...driverDocs].sort((x, y) => y.created_at.localeCompare(x.created_at)).forEach(doc => { if (!latestByType.has(doc.document_type)) latestByType.set(doc.document_type, doc); });
-      const currentDocs = [...latestByType.values()];
       const allApproved = missing.length === 0 && currentDocs.every(d => d.review_status === "approved");
       return <View key={row.user_id} style={s.card}>
         <View style={s.rowBetween}>
