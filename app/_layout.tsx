@@ -5,6 +5,17 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/lib/auth";
+import * as Notifications from "expo-notifications";
+import "@/src/lib/driverBackgroundTask";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const qc = new QueryClient();
 
@@ -26,4 +37,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-
