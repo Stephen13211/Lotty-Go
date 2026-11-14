@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "za.co.lottygo.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Lotty Go uses your location to request rides and match drivers."
+        "NSLocationWhenInUseUsageDescription": "Lotty Go uses your location to match you with nearby riders while you are online."
       }
     },
     "android": {
@@ -33,7 +33,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Lotty Go uses your location to request rides and match drivers."
+          "locationWhenInUsePermission": "Lotty Go uses your location to match you with nearby riders while you are online.",
+          "locationAlwaysAndWhenInUsePermission": "Lotty Go shares your location in the background only while you are online, so you can receive ride requests.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       "@maplibre/maplibre-react-native",
@@ -44,7 +48,8 @@
             "extraProguardRules": "-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class * extends androidx.work.InputMerger { <init>(); }"
           }
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true
