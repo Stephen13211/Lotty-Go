@@ -1,7 +1,7 @@
 import Icon from "@react-native-vector-icons/material-design-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/lib/auth";
 import { supabase } from "@/src/lib/supabase";
@@ -11,13 +11,13 @@ type Application = {
   user_id: string; legal_name: string | null; phone: string | null;
   vehicle_type: string | null; vehicle_make: string | null; vehicle_model: string | null;
   vehicle_year: number | null; vehicle_registration: string | null;
-  application_status: string; women_riders_only: boolean; women_service_approved: boolean;
+  application_status: string; women_riders_only: boolean; women_service_requested: boolean; women_service_approved: boolean;
   created_at: string;
   payout_provider?: string | null; payout_recipient_id?: string | null; payout_status?: string;
 };
 type DriverDocument = {
   id: string; driver_id: string; document_type: string; storage_path: string;
-  review_status: "pending" | "approved" | "rejected"; created_at: string;
+  review_status: "pending" | "approved" | "rejected"; review_notes?: string | null; created_at: string;
 };
 const DOCUMENT_LABELS: Record<string, string> = {
   south_african_id: "South African ID",
@@ -39,6 +39,8 @@ export default function AdminReview() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const [documentToReject, setDocumentToReject] = useState<DriverDocument | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const { session } = useAuth();
   const isAdmin = session?.user?.app_metadata?.role === "admin";
 
@@ -80,15 +82,43 @@ export default function AdminReview() {
   };
 
   const reviewDocument = async (doc: DriverDocument, status: "approved" | "rejected") => {
+    if (status === "rejected") {
+      setDocumentToReject(doc);
+      setRejectionReason("");
+      return;
+    }
     setBusy(doc.id);
     try {
       const { error } = await supabase.from("driver_documents")
-        .update({ review_status: status, reviewed_at: new Date().toISOString() })
+        .update({ review_status: "approved", review_notes: null, reviewed_at: new Date().toISOString() })
         .eq("id", doc.id);
       if (error) throw error;
       await refresh();
     } catch (e: any) {
       Alert.alert("Document review failed", e?.message ?? "Admin permission is required.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const submitDocumentRejection = async () => {
+    if (!documentToReject || !rejectionReason.trim()) {
+      Alert.alert("Explanation required", "Please explain what the driver needs to correct.");
+      return;
+    }
+    const doc = documentToReject;
+    setBusy(doc.id);
+    try {
+      const { error } = await supabase.from("driver_documents")
+        .update({ review_status: "rejected", review_notes: rejectionReason.trim(), reviewed_at: new Date().toISOString() })
+        .eq("id", doc.id);
+      if (error) throw error;
+      setDocumentToReject(null);
+      setRejectionReason("");
+      await refresh();
+      Alert.alert("Feedback sent", "The driver can now see what needs correcting and upload a replacement document.");
+    } catch (e: any) {
+      Alert.alert("Could not send feedback", e?.message ?? "Admin permission is required.");
     } finally {
       setBusy(null);
     }
@@ -120,9 +150,12 @@ export default function AdminReview() {
 
   const reviewApplication = async (row: Application, approved: boolean) => {
     const driverDocs = documents.filter(d => d.driver_id === row.user_id);
-    const present = new Set(driverDocs.map(d => d.document_type));
+    const latestByType = new Map<string, DriverDocument>();
+    [...driverDocs].sort((x, y) => y.created_at.localeCompare(x.created_at)).forEach(doc => { if (!latestByType.has(doc.document_type)) latestByType.set(doc.document_type, doc); });
+    const currentDocs = [...latestByType.values()];
+    const present = new Set(currentDocs.map(d => d.document_type));
     const missing = REQUIRED_DOCUMENTS.filter(type => !present.has(type));
-    const unreviewed = driverDocs.filter(d => d.review_status !== "approved");
+    const unreviewed = currentDocs.filter(d => d.review_status !== "approved");
     if (approved && (missing.length > 0 || unreviewed.length > 0)) {
       const missingLabels = missing.map(type => DOCUMENT_LABELS[type]).join(", ");
       const pendingLabels = unreviewed.map(d => DOCUMENT_LABELS[d.document_type] ?? d.document_type).join(", ");
@@ -183,9 +216,12 @@ export default function AdminReview() {
     <Text style={s.sub}>Manually inspect each private document and the vehicle details before approving a driver.</Text>
     {isLoading || docsLoading ? <ActivityIndicator color={colors.brandPrimary} /> : error ? <Text style={s.sub}>Could not load applications: {(error as Error).message}</Text> : rows.length === 0 ? <Text style={s.sub}>No driver applications yet.</Text> : rows.map(row => {
       const driverDocs = documents.filter(d => d.driver_id === row.user_id);
-      const present = new Set(driverDocs.map(d => d.document_type));
+      const latestByType = new Map<string, DriverDocument>();
+      [...driverDocs].sort((x, y) => y.created_at.localeCompare(x.created_at)).forEach(doc => { if (!latestByType.has(doc.document_type)) latestByType.set(doc.document_type, doc); });
+      const currentDocs = [...latestByType.values()];
+      const present = new Set(currentDocs.map(d => d.document_type));
       const missing = REQUIRED_DOCUMENTS.filter(type => !present.has(type));
-      const allApproved = missing.length === 0 && driverDocs.every(d => d.review_status === "approved");
+      const allApproved = missing.length === 0 && currentDocs.every(d => d.review_status === "approved");
       return <View key={row.user_id} style={s.card}>
         <View style={s.rowBetween}>
           <Text style={s.name}>{row.legal_name || "Driver applicant"}</Text>
@@ -202,11 +238,12 @@ export default function AdminReview() {
           </View> : null}
         </View>
         <Text style={s.section}>DOCUMENT CHECKLIST</Text>
-        {driverDocs.length === 0 ? <Text style={s.sub}>No documents uploaded yet.</Text> : driverDocs.map(doc => (
+        {currentDocs.length === 0 ? <Text style={s.sub}>No documents uploaded yet.</Text> : currentDocs.map(doc => (
           <View key={doc.id} style={s.document}>
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={s.docName}>{DOCUMENT_LABELS[doc.document_type] ?? doc.document_type}</Text>
               <Text style={[s.docStatus, doc.review_status === "approved" ? s.good : doc.review_status === "rejected" ? s.bad : s.waiting]}>{doc.review_status.toUpperCase()}</Text>
+              {doc.review_status === "rejected" && doc.review_notes ? <Text style={s.warning}>Driver feedback: {doc.review_notes}</Text> : null}
             </View>
             <Pressable disabled={!!busy} onPress={() => openDocument(doc)} style={s.smallButton}>
               {busy === doc.id ? <ActivityIndicator size="small" color={colors.brandPrimary} /> : <Text style={s.smallButtonText}>View</Text>}
@@ -216,7 +253,7 @@ export default function AdminReview() {
           </View>
         ))}
         {missing.length > 0 ? <Text style={s.warning}>Missing baseline documents: {missing.map(type => DOCUMENT_LABELS[type]).join(", ")}</Text> : null}
-        {row.women_riders_only ? <Text style={s.women}>Requests women riders only · Women-service approval: {row.women_service_approved ? "Yes" : "No"}</Text> : null}
+        {row.vehicle_type === "car" ? <Text style={s.women}>Lotty Women application: {row.women_service_requested ? "REQUESTED" : "NOT REQUESTED"} · Separate approval: {row.women_service_approved ? "APPROVED" : "NOT APPROVED"}</Text> : null}
         {row.application_status !== "approved" ? <View style={s.actions}>
           <Pressable disabled={!!busy || !allApproved} onPress={() => reviewApplication(row, true)} style={[s.approve, (!allApproved || !!busy) && s.disabled]}>
             <Text style={s.approveText}>Approve driver</Text>
@@ -225,13 +262,36 @@ export default function AdminReview() {
             <Text style={s.rejectText}>Reject application</Text>
           </Pressable>
         </View> : <View style={{ gap: spacing.xs }}>
-          {row.vehicle_type === "motorcycle" ? <Text style={s.sub}>Courier-only motorcycle drivers are not eligible for Lotty Women.</Text> : <><Text style={s.sub}>Lotty Women eligibility is reviewed separately from general driver approval.</Text>
-          <Pressable disabled={!!busy} onPress={() => setWomenService(row, !row.women_service_approved)} style={s.womenButton}>
-            <Text style={s.womenButtonText}>{row.women_service_approved ? "Disable Lotty Women" : "Approve for Lotty Women"}</Text>
-          </Pressable></>}
+          {row.vehicle_type === "motorcycle" ? <Text style={s.sub}>Courier-only motorcycle drivers are not eligible for Lotty Women.</Text> : <><Text style={s.sub}>Lotty Women access is separate from normal driver approval. A declined or unrequested Lotty Women application does not block ordinary car rides.</Text>
+          {row.women_service_requested ? <Pressable disabled={!!busy} onPress={() => setWomenService(row, !row.women_service_approved)} style={s.womenButton}>
+            <Text style={s.womenButtonText}>{row.women_service_approved ? "Decline / revoke Lotty Women" : "Approve Lotty Women"}</Text>
+          </Pressable> : <Text style={s.sub}>This applicant did not request Lotty Women access.</Text>}</>}
         </View>}
       </View>;
     })}
+    <Modal visible={!!documentToReject} transparent animationType="fade" onRequestClose={() => setDocumentToReject(null)}>
+      <View style={s.modalBackdrop}>
+        <View style={s.modalCard}>
+          <Text style={s.modalTitle}>Why are you declining this document?</Text>
+          <Text style={s.sub}>{documentToReject ? DOCUMENT_LABELS[documentToReject.document_type] ?? documentToReject.document_type : ""}</Text>
+          <TextInput
+            value={rejectionReason}
+            onChangeText={setRejectionReason}
+            placeholder="Explain what is wrong and what the driver must upload..."
+            placeholderTextColor={colors.muted}
+            multiline
+            textAlignVertical="top"
+            style={s.reasonInput}
+          />
+          <View style={s.actions}>
+            <Pressable disabled={!!busy} onPress={() => setDocumentToReject(null)} style={s.smallButton}><Text style={s.smallButtonText}>Cancel</Text></Pressable>
+            <Pressable disabled={!!busy || !rejectionReason.trim()} onPress={submitDocumentRejection} style={[s.reject, (!!busy || !rejectionReason.trim()) && s.disabled]}>
+              {busy === documentToReject?.id ? <ActivityIndicator color={colors.error} /> : <Text style={s.rejectText}>Send feedback</Text>}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
     <View style={s.note}>
       <Icon name="shield-check-outline" size={20} color={colors.brandPrimary} />
       <Text style={s.sub}>Baseline checks: ID, driver's licence, vehicle registration, roadworthy certificate and police-clearance/criminal-record report. Review PrDP and operating licence when applicable. Open each document and compare it with the applicant and vehicle details before marking it approved.</Text>
@@ -266,4 +326,8 @@ const s = StyleSheet.create({
   womenButton: { minHeight: 42, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.brandPrimary, alignItems: "center", justifyContent: "center" },
   womenButtonText: { fontSize: 12, fontWeight: "900", color: colors.brandPrimary },
   note: { flexDirection: "row", gap: spacing.sm, padding: spacing.md, backgroundColor: colors.brandTertiary, borderRadius: radius.md },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "center", padding: spacing.xl },
+  modalCard: { backgroundColor: "#151517", borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+  modalTitle: { color: colors.onSurface, fontSize: 18, fontWeight: "900" },
+  reasonInput: { minHeight: 130, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, backgroundColor: colors.surfaceSecondary },
 });

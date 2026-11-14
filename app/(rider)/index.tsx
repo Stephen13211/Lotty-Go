@@ -128,6 +128,7 @@ export default function RiderHome() {
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
   const [roadRouteDistanceKm, setRoadRouteDistanceKm] = useState<number | null>(null);
+  const [roadRouteDurationMinutes, setRoadRouteDurationMinutes] = useState<number | null>(null);
   const { data: nearbyDrivers = [] } = useQuery({
     queryKey: ["nearby-drivers", pickup?.coords.latitude, pickup?.coords.longitude, selectedRide],
     queryFn: () => getNearbyOnlineDrivers(pickup!.coords, selectedRide),
@@ -178,11 +179,13 @@ export default function RiderHome() {
     if (routePoints.length < 2) {
       setRoadRouteCoordinates([]);
       setRoadRouteDistanceKm(null);
+      setRoadRouteDurationMinutes(null);
       return;
     }
 
     let cancelled = false;
     setRoadRouteDistanceKm(null);
+    setRoadRouteDurationMinutes(null);
     const coordinates = routePoints
       .map(point => `${point.coords.longitude},${point.coords.latitude}`)
       .join(";");
@@ -204,21 +207,22 @@ export default function RiderHome() {
             })),
           );
           setRoadRouteDistanceKm(Number(result.routes[0].distance) / 1000);
+          setRoadRouteDurationMinutes(Math.max(1, Number(result.routes[0].duration) / 60));
         } else if (!cancelled) {
           setRoadRouteCoordinates(routePoints.map(point => point.coords));
-          setRoadRouteDistanceKm(
-            routePoints.slice(1).reduce((total, point, index) =>
-              total + haversineKm(routePoints[index].coords, point.coords), 0),
-          );
+          const fallbackDistance = routePoints.slice(1).reduce((total, point, index) =>
+            total + haversineKm(routePoints[index].coords, point.coords), 0);
+          setRoadRouteDistanceKm(fallbackDistance);
+          setRoadRouteDurationMinutes(Math.max(1, fallbackDistance * 2));
         }
       })
       .catch(() => {
         if (!cancelled) {
           setRoadRouteCoordinates(routePoints.map(point => point.coords));
-          setRoadRouteDistanceKm(
-            routePoints.slice(1).reduce((total, point, index) =>
-              total + haversineKm(routePoints[index].coords, point.coords), 0),
-          );
+          const fallbackDistance = routePoints.slice(1).reduce((total, point, index) =>
+            total + haversineKm(routePoints[index].coords, point.coords), 0);
+          setRoadRouteDistanceKm(fallbackDistance);
+          setRoadRouteDurationMinutes(Math.max(1, fallbackDistance * 2));
         }
       });
 
@@ -227,7 +231,10 @@ export default function RiderHome() {
 
   const straightLineKm = routePoints.length > 1 ? routePoints.slice(1).reduce((total, point, index) => total + haversineKm(routePoints[index].coords, point.coords), 0) : 0;
   const km = roadRouteDistanceKm ?? straightLineKm;
+  const minutes = roadRouteDurationMinutes ?? Math.max(1, km * 2);
   const selectedOption = RIDE_OPTIONS.find(option => option.type === selectedRide) ?? RIDE_OPTIONS[0];
+  const riderGender = session?.user?.user_metadata?.gender;
+  const canUseLottyWomen = riderGender === "female";
 
   const confirmRide = async () => {
     if (!pickup || !destination || stops.some(stop => !stop.coords)) {
@@ -236,6 +243,10 @@ export default function RiderHome() {
     }
     if (!configured || !session) {
       Alert.alert("Sign in required", "Please sign in before requesting a ride.");
+      return;
+    }
+    if (selectedRide === "lotty_xl" && !canUseLottyWomen) {
+      Alert.alert("Lotty Women unavailable", "Lotty Women is only available to female riders. You can still book any standard ride.");
       return;
     }
     if (selectedOption.available === false) {
@@ -256,7 +267,7 @@ export default function RiderHome() {
         ride_type: selectedRide,
         payment_method: payment,
         service_notes: selectedRide === "courier_motorcycle" ? courierNotes.trim() : null,
-        fare: estimateFare(km, selectedOption.multiplier),
+        fare: estimateFare(km, selectedOption.multiplier, minutes),
         distance_km: Number(km.toFixed(2)),
       });
 
@@ -357,14 +368,15 @@ export default function RiderHome() {
           {RIDE_OPTIONS.map(option => {
             const active = selectedRide === option.type;
             const unavailable = option.available === false;
+            const genderRestricted = option.type === "lotty_xl" && !canUseLottyWomen;
             return <Pressable key={option.type} disabled={unavailable} onPress={() => setSelectedRide(option.type)}
               style={[s.rideOption, active && s.rideOptionActive, unavailable && { opacity: 0.55 }]}>
               <LinearGradient colors={active ? ["#F9E27D", "#C9992B"] : ["#29251B", "#171719"]} style={s.rideIcon}><Icon name={option.icon as any} size={25} color={active ? "#17130A" : colors.goldLight} /></LinearGradient>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={s.rideName}>{option.name}</Text>
-                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{unavailable ? " · Coming soon" : " · Available"}</Text>
+                <Text style={s.subText}>{option.type === "courier_motorcycle" ? "Motorcycle parcel delivery" : `${option.seats} passengers`}{genderRestricted ? " · Female riders only" : option.available === false ? " · Coming soon" : " · Available"}</Text>
               </View>
-              {unavailable ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier)}` : "—"}</Text>}
+              {genderRestricted ? <Text style={s.comingSoon}>LOCKED</Text> : option.available === false ? <Text style={s.comingSoon}>SOON</Text> : <Text style={s.fare}>{routePoints.length > 1 ? `R${estimateFare(km, option.multiplier, minutes)}` : "—"}</Text>}
               {active && !unavailable && <Icon name="check-circle" size={21} color={colors.brandPrimary} />}
             </Pressable>;
           })}
@@ -385,7 +397,7 @@ export default function RiderHome() {
           <Pressable onPress={confirmRide} disabled={busy || !!requestedRide || selectedOption.available === false}
             style={({ pressed }) => [s.ctaShell, (busy || selectedOption.available === false) && { opacity: 0.55 }, pressed && { transform: [{ scale: 0.985 }] }]}>
             <LinearGradient colors={["#F9E27D", "#D4AF37", "#A77C20"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.cta}>
-              {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <><Text style={s.ctaText}>Confirm ride</Text><Text style={s.ctaFare}>{routePoints.length > 1 ? "R" + estimateFare(km, selectedOption.multiplier) : "Continue"}</Text></>}
+              {busy ? <ActivityIndicator color={colors.onBrandPrimary} /> : <><Text style={s.ctaText}>Confirm ride</Text><Text style={s.ctaFare}>{routePoints.length > 1 ? "R" + estimateFare(km, selectedOption.multiplier, minutes) : "Continue"}</Text></>}
             </LinearGradient>
           </Pressable>
           <Text style={s.hint}>Choose a pickup and destination from the suggestions. Add up to two stops between pickup and destination.</Text>

@@ -8,7 +8,7 @@ type Ctx = {
   session: Session | null; role: Role | null; loading: boolean; configured: boolean;
   setRole: (r: Role) => Promise<void>;
   signIn: (e: string, p: string) => Promise<void>;
-  signUp: (e: string, p: string, name: string, r: Role) => Promise<void>;
+  signUp: (e: string, p: string, name: string, r: Role, gender?: "male" | "female" | "other") => Promise<void>;
   signOut: () => Promise<void>;
 };
 const AuthContext = createContext<Ctx | null>(null);

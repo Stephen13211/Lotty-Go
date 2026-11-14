@@ -87,7 +87,15 @@ export async function revokeTripShareLinks(rideId:string) {
 export async function cancelRide(rideId:string,reason:string) {
   const {data,error}=await supabase.rpc("cancel_ride_request",{p_ride_id:rideId,p_reason:reason});
   if(error)throw error;
-  return (data?.[0] ?? null) as {cancelled_status:string;cancellation_fee:number;driver_distance_km:number|null} | null;
+  return (data?.[0] ?? null) as {
+    cancelled_status:string;
+    cancellation_fee:number;
+    driver_distance_km:number|null;
+    driver_fee_share:number;
+    lotty_fee_share:number;
+    refund_amount:number;
+    refund_status:"not_applicable"|"pending"|"processing"|"refunded"|"failed";
+  } | null;
 }
 
 export async function getRiderPickupPin(rideId:string) {

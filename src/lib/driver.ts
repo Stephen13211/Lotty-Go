@@ -12,6 +12,7 @@ export type DriverProfile = {
   vehicle_year: number | null;
   vehicle_registration: string | null;
   women_riders_only: boolean;
+  women_service_requested: boolean;
   women_service_approved: boolean;
   women_service_enabled: boolean;
   payout_status: "not_connected" | "pending" | "verified" | "rejected";
@@ -37,10 +38,12 @@ export async function saveDriverApplication(input: {
   vehicle_model: string;
   vehicle_year: number | null;
   vehicle_registration: string;
+  women_service_requested: boolean;
 }) {
   const { data, error } = await supabase.from("driver_profiles").upsert({
     ...input,
     application_status: "pending",
+    women_service_requested: input.women_service_requested,
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id" }).select().single();
   if (error) throw error;

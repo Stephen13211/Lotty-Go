@@ -13,13 +13,15 @@ export default function Signup() {
   const { role } = useLocalSearchParams<{ role?: "rider"|"driver" }>();
   const { signUp, configured } = useAuth();
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "other" | null>(null);
   const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     if (!configured) { setErr("Add Supabase URL + anon key in .env."); return; }
     if (name.trim().length < 2) { setErr("Please enter your name."); return; }
+    if (role !== "driver" && !gender) { setErr("Please select your gender to continue."); return; }
     setErr(null); setBusy(true);
-    try { await signUp(email.trim(), password, name.trim(), (role as any) ?? "rider"); router.replace("/"); }
+    try { await signUp(email.trim(), password, name.trim(), (role as any) ?? "rider", gender ?? undefined); router.replace("/"); }
     catch (e: any) { setErr(e?.message ?? "Sign up failed"); }
     finally { setBusy(false); }
   };
@@ -35,6 +37,7 @@ export default function Signup() {
 
         <Text style={s.label}>Full name</Text>
         <TextInput value={name} onChangeText={setName} placeholder="Thabo Mokoena" placeholderTextColor={colors.muted} style={s.input} />
+        {role !== "driver" ? <><Text style={s.label}>Gender</Text><View style={s.genderRow}>{(["male", "female", "other"] as const).map(value => <Pressable key={value} onPress={() => setGender(value)} style={[s.genderChoice, gender === value && s.genderChoiceActive]}><Text style={[s.genderText, gender === value && s.genderTextActive]}>{value === "male" ? "Male" : value === "female" ? "Female" : "Other"}</Text></Pressable>)}</View></> : null}
         <Text style={s.label}>Email</Text>
         <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@example.com" placeholderTextColor={colors.muted} style={s.input} />
         <Text style={s.label}>Password</Text>
@@ -50,6 +53,10 @@ const s = StyleSheet.create({
   title: { fontSize: 32, fontWeight: "800", color: colors.onSurface },
   sub: { fontSize: 15, color: colors.muted, marginBottom: spacing.lg },
   label: { fontSize: 13, color: colors.onSurfaceSecondary, fontWeight: "600" },
+  genderRow: { flexDirection: "row", gap: 8 },
+  genderChoice: { flex: 1, paddingVertical: 13, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSecondary, alignItems: "center" },
+  genderChoiceActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary },
+  genderText: { color: colors.muted, fontWeight: "700" }, genderTextActive: { color: colors.onSurface },
   input: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, padding: 14, fontSize: 16, color: colors.onSurface, borderWidth: 1, borderColor: colors.border },
   ctaShell: { marginTop: spacing.lg, borderRadius: radius.pill, overflow: "hidden", shadowColor: colors.brandPrimary, shadowOpacity: 0.3, shadowRadius: 14, elevation: 8 },
   cta: { height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
