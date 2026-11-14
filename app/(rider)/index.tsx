@@ -10,7 +10,7 @@ import ActiveRideScreen from "@/src/components/ActiveRideScreen";
 import RideMatchingScreen from "@/src/components/RideMatchingScreen";
 import { MapView, Marker, Polyline } from "@/src/components/map";
 import { useAuth } from "@/src/lib/auth";
-import { advanceRideDispatch, createRide, estimateFare, getNearbyOnlineDrivers, haversineKm, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
+import { advanceRideDispatch, createRide, estimateFare, getNearbyOnlineDrivers, haversineKm, notifyDriverRideOffer, RIDE_OPTIONS, type PaymentMethod, type RideType } from "@/src/lib/rides";
 import { getActiveRide, getRequestedRide } from "@/src/lib/activeRide";
 import { colors, radius, spacing } from "@/src/theme";
 
@@ -110,6 +110,7 @@ function PlaceInput({ label, value, placeholder, icon, onChangeText, onSelect, r
 export default function RiderHome() {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
+  const notifiedOffers = useRef<Set<string>>(new Set());
   const snaps = useMemo(() => ["48%", "76%"], []);
   const { session, configured } = useAuth();
   const queryClient = useQueryClient();
@@ -125,6 +126,17 @@ export default function RiderHome() {
   const [payment, setPayment] = useState<PaymentMethod>("cash");
   const [courierNotes, setCourierNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const driverId = dispatchState?.offered_driver_id;
+    if (!requestedRide?.id || !driverId) return;
+    const offerKey = requestedRide.id + ":" + driverId;
+    if (notifiedOffers.current.has(offerKey)) return;
+    notifiedOffers.current.add(offerKey);
+    notifyDriverRideOffer(requestedRide.id, driverId).catch(error => {
+      console.warn("Could not send driver push notification:", error);
+    });
+  }, [dispatchState?.offered_driver_id, requestedRide?.id]);
+
   const [locationBusy, setLocationBusy] = useState(true);
   const [roadRouteCoordinates, setRoadRouteCoordinates] = useState<Coords[]>([]);
   const [roadRouteDistanceKm, setRoadRouteDistanceKm] = useState<number | null>(null);
