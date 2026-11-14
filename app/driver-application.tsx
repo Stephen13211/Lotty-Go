@@ -18,6 +18,7 @@ const DOCUMENTS = [
   { type: "police_clearance", label: "Police clearance / criminal-record check" },
 ] as const;
 type DocumentType = (typeof DOCUMENTS)[number]["type"];
+type DriverDocumentReview = { id: string; document_type: DocumentType; review_status: "pending" | "approved" | "rejected"; review_notes: string | null; created_at: string };
 
 function Field({ label, value, onChangeText, placeholder, keyboardType }: any) {
   return <View style={{ gap:  6 }}><Text style={s.label}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={colors.muted} keyboardType={keyboardType} style={s.input} /></View>;
@@ -32,6 +33,7 @@ export default function DriverApplication() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
+  const [documentReviews, setDocumentReviews] = useState<DriverDocumentReview[]>([]);
   const [legalName, setLegalName] = useState(session?.user.user_metadata?.full_name ?? "");
   const [phone, setPhone] = useState("");
   const [vehicleType, setVehicleType] = useState<"car" | "motorcycle">("car");
@@ -43,6 +45,9 @@ export default function DriverApplication() {
     if (!session) { setLoading(false); return; }
     getDriverProfile(session.user.id).then(p => {
       setProfile(p);
+      const { data: reviewRows, error: reviewError } = await supabase.from("driver_documents").select("id,document_type,review_status,review_notes,created_at").eq("driver_id", session.user.id).order("created_at", { ascending: false });
+      if (reviewError) throw reviewError;
+      setDocumentReviews((reviewRows ?? []) as DriverDocumentReview[]);
       if (p) { setPhotoUrl(p.profile_photo_url ?? null); setLegalName(p.legal_name ?? ""); setPhone(p.phone ?? ""); setVehicleType(p.vehicle_type ?? "car"); setMake(p.vehicle_make ?? ""); setModel(p.vehicle_model ?? ""); setYear(p.vehicle_year ? String(p.vehicle_year) : ""); setRegistration(p.vehicle_registration ?? ""); setWomenServiceEnabled(!!p.women_service_enabled); setWomenServiceRequested(!!p.women_service_requested); }
     }).catch(e => Alert.alert("Could not load application", e.message)).finally(() => setLoading(false));
   }, [session?.user.id]);
@@ -80,7 +85,10 @@ export default function DriverApplication() {
         throw metadataError;
       }
       setUploaded(previous => ({ ...previous, [documentType]: asset.name }));
-      Alert.alert("Document uploaded", `${label} was uploaded securely.`);
+      const { data: reviewRows, error: reviewError } = await supabase.from("driver_documents").select("id,document_type,review_status,review_notes,created_at").eq("driver_id", session.user.id).order("created_at", { ascending: false });
+      if (reviewError) throw reviewError;
+      setDocumentReviews((reviewRows ?? []) as DriverDocumentReview[]);
+      Alert.alert("Replacement uploaded", `${label} was uploaded securely and is waiting for review.`);
     } catch (error: any) {
       Alert.alert("Upload failed", error?.message ?? "Please try again.");
     } finally {
@@ -157,13 +165,21 @@ export default function DriverApplication() {
     <Field label="Registration number" value={registration} onChangeText={setRegistration} placeholder="CA 123-456" />
     {vehicleType !== "motorcycle" ? (status === "approved" && profile?.women_service_approved ? <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Lotty Women trips</Text><Text style={s.muted}>Optional: switch on to receive Lotty Women requests. You will still receive your normal eligible trips.</Text></View><Switch value={womenServiceEnabled} onValueChange={setWomenServiceEnabled} trackColor={{ true: colors.brandPrimary }} /></View> : <View style={s.preference}><View style={{ flex: 1, gap: 4 }}><Text style={s.itemTitle}>Apply for Lotty Women</Text><Text style={s.muted}>{status === "approved" ? "Your normal driver approval remains active. Contact Lotty Go to request a separate Lotty Women review." : "Optional for car applicants. Lotty Go reviews this separately; declining it will not affect approval for normal rides."}</Text></View>{status !== "approved" ? <Switch value={womenServiceRequested} onValueChange={setWomenServiceRequested} trackColor={{ true: colors.brandPrimary }} /> : null}</View>) : null}
     <Text style={s.section}>DOCUMENTS AND VERIFICATION</Text>
-    {DOCUMENTS.map(doc => <View key={doc.type} style={s.doc}>
-      <Icon name="file-document-outline" size={20} color={colors.brandPrimary} />
-      <View style={{ flex: 1, gap: 3 }}><Text style={{ color: colors.onSurface, fontWeight: "700" }}>{doc.label}</Text><Text style={uploaded[doc.type] ? s.uploaded : s.pending}>{uploaded[doc.type] ? "UPLOADED" : "NOT UPLOADED"}</Text></View>
-      <Pressable disabled={uploading !== null} onPress={() => uploadDocument(doc.type, doc.label)} style={s.uploadButton}>
-        {uploading === doc.type ? <ActivityIndicator size="small" color={colors.brandPrimary} /> : <Text style={s.uploadText}>{uploaded[doc.type] ? "Replace" : "Upload"}</Text>}
-      </Pressable>
-    </View>)}
+    {DOCUMENTS.map(doc => {
+      const latest = documentReviews.find(item => item.document_type === doc.type);
+      return <View key={doc.type} style={s.doc}>
+        <Icon name="file-document-outline" size={20} color={colors.brandPrimary} />
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ color: colors.onSurface, fontWeight: "700" }}>{doc.label}</Text>
+          <Text style={latest ? (latest.review_status === "approved" ? s.uploaded : latest.review_status === "rejected" ? s.rejected : s.pending) : s.pending}>{latest ? latest.review_status.toUpperCase() : "NOT UPLOADED"}</Text>
+          {latest?.review_status === "rejected" && latest.review_notes ? <Text style={s.rejectionNote}>Lotty Go: {latest.review_notes}</Text> : null}
+          {latest?.review_status === "rejected" ? <Text style={s.pending}>Please upload a corrected replacement.</Text> : null}
+        </View>
+        <Pressable disabled={uploading !== null} onPress={() => uploadDocument(doc.type, doc.label)} style={s.uploadButton}>
+          {uploading === doc.type ? <ActivityIndicator size="small" color={colors.brandPrimary} /> : <Text style={s.uploadText}>{latest ? (latest.review_status === "rejected" ? "Replace now" : "Replace") : "Upload"}</Text>}
+        </Pressable>
+      </View>;
+    })}
     <Text style={s.note}>Accepted formats: PDF, JPG and PNG. Maximum file size: 10 MB. Documents are stored in a private bucket and are not made public.</Text>
     <Pressable onPress={submit} disabled={saving || uploading !== null} style={[s.button, (saving || uploading !== null) && { opacity: 0.6 }]}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Save and submit application</Text>}</Pressable>
   </ScrollView>;
@@ -175,7 +191,7 @@ const s = StyleSheet.create({
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, color: colors.onSurface, backgroundColor: colors.surfaceSecondary },
   choice: { flex: 1, minWidth: 0, minHeight: 60, paddingHorizontal: spacing.xs, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs }, choiceActive: { borderColor: colors.brandPrimary, backgroundColor: colors.brandTertiary }, choiceText: { flexShrink: 1, fontSize: 12, textAlign: "center", fontWeight: "800", color: colors.onSurface },
   preference: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.md, backgroundColor: "#151517", borderRadius: 14, borderWidth: 1, borderColor: "#39301B" }, itemTitle: { fontWeight: "800", color: colors.onSurface },
-  doc: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider, paddingVertical: spacing.xs }, pending: { fontSize: 9, fontWeight: "900", color: colors.warning }, uploaded: { fontSize: 9, fontWeight: "900", color: colors.brandPrimary },
+  doc: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider, paddingVertical: spacing.xs }, pending: { fontSize: 9, fontWeight: "900", color: colors.warning }, uploaded: { fontSize: 9, fontWeight: "900", color: colors.brandPrimary }, rejected: { fontSize: 9, fontWeight: "900", color: colors.error }, rejectionNote: { fontSize: 11, color: colors.error, lineHeight: 16, marginTop: 3 },
   uploadButton: { minWidth: 70, minHeight: 36, borderRadius: radius.md, borderWidth: 1, borderColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.sm }, uploadText: { fontSize: 12, fontWeight: "800", color: colors.brandPrimary },
   note: { fontSize: 11, color: colors.muted, lineHeight: 17 }, button: { minHeight: 54, borderRadius: radius.pill, backgroundColor: colors.brandPrimary, alignItems: "center", justifyContent: "center", marginTop: spacing.md }, buttonText: { fontWeight: "900", color: "#fff", fontSize: 15 }
 });
