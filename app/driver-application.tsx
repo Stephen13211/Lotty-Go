@@ -43,7 +43,7 @@ export default function DriverApplication() {
 
   useEffect(() => {
     if (!session) { setLoading(false); return; }
-    getDriverProfile(session.user.id).then(p => {
+    getDriverProfile(session.user.id).then(async p => {
       setProfile(p);
       const { data: reviewRows, error: reviewError } = await supabase.from("driver_documents").select("id,document_type,review_status,review_notes,created_at").eq("driver_id", session.user.id).order("created_at", { ascending: false });
       if (reviewError) throw reviewError;
